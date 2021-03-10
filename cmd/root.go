@@ -14,7 +14,7 @@ import (
 
 // default options
 const (
-	DefaultAPIVersion    = "1"
+	DefaultAPIVersion    = "1" // for now this is the only version available
 	DefaultgRPCport      = "9090"
 	DefaultServerAddress = "localhost"
 	DefaultLogFile       = "./archer.log"

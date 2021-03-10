@@ -31,7 +31,7 @@ func Launch(ctx context.Context, serverAPI api.ArcherServer, port string) error 
 
 	// prepare a graceful shutdown
 	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// start the gRPC server
 	go func() {
@@ -46,6 +46,8 @@ func Launch(ctx context.Context, serverAPI api.ArcherServer, port string) error 
 	log.Printf("caught signal: %v", sig)
 	log.Println("shutting down server")
 	server.GracefulStop()
+
+	// wait for server to complete shutdown
 	<-ctx.Done()
 	return nil
 }

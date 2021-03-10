@@ -12,7 +12,7 @@ import "google/protobuf/timestamp.proto";
 service Archer {
 
     // Start will begin processing for a sample.
-    rpc Start(stream StartRequest) returns (StartResponse) {};
+    rpc Start(StartRequest) returns (StartResponse) {};
 
     // Cancel will cancel processing for a sample.
     rpc Cancel (CancelRequest) returns (CancelResponse) {};
@@ -47,29 +47,26 @@ enum State {
 // processed by Archer.
 message SampleInfo {
 
-    // api version
-    string apiVersion = 1;
-
     // id of the sample, as returned by start()
-    string id = 2;
+    string id = 1;
 
     // the original message used to start the sample processing
-    StartRequest startRequest = 3;
+    StartRequest startRequest = 2;
 
     // state the sample is in
-    State state = 4;
+    State state = 3;
 
     // errors will contain encountered errors (if state is STATE_ERROR, otherwise this will be empty)
-    repeated string errors = 5;
+    repeated string errors = 4;
 
     // filesDiscovered is the number of files found for this sample
-    int32 filesDiscovered = 6;
+    int32 filesDiscovered = 5;
 
     // startTime for processing
-    google.protobuf.Timestamp startTime = 7;
+    google.protobuf.Timestamp startTime = 6;
 
     // endTime for processing (unset if processing still running)
-    google.protobuf.Timestamp endTime = 8;
+    google.protobuf.Timestamp endTime = 7;
 
 }
 
@@ -79,16 +76,11 @@ message StartRequest {
     // api version
     string apiVersion = 1;
 
-    // Input directories to search for reads to be basecalled.
-    //
-    // Currently, only one directory can be specified, but this definition allows for multiple in
-    // the future without breaking compatibility.
-    repeated string input_reads_directories = 2;
+    // input directories to search for reads process
+    repeated string inputReadsDirectories = 2;
 
-    // Output directory where called reads will be placed.
-    //
-    // Reads will be sorted into subdirectories based on the sequencing run they came from.
-    string output_reads_directory = 3;
+    // endpoint for processed data
+    string endpoint = 3;
 
 }
 

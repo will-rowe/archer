@@ -51,7 +51,7 @@ func launchArcher() {
 	// get top level context
 	ctx := context.Background()
 
-	// get the server API
+	// get the service API
 	serverAPI := service.NewArcher()
 
 	// run the server until shutdown signal received
@@ -59,5 +59,11 @@ func launchArcher() {
 		log.Fatal(err)
 		os.Exit(1)
 	}
+
+	// clean up the service API
+	if err := serverAPI.Shutdown(); err != nil {
+		log.Fatalf("could not shutdown the Archer service: %v", err)
+	}
+
 	log.Println("finished")
 }
