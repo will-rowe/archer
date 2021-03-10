@@ -23,7 +23,16 @@ jobs:
           go-version: ${{ matrix.goversion }}
 
       - name: Install protoc
-        uses: arduino/setup-protoc@v1
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+                apt install -y protobuf-compiler
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+                brew install protobuf
+          else
+                echo "$RUNNER_OS not supported"
+                exit 1
+          fi
+          protoc --version
 
       - name: Checkout code
         uses: actions/checkout@v2
