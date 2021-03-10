@@ -25,7 +25,19 @@ jobs:
           go-version: ${{ matrix.goversion }}
 
       - name: Install protoc
-        uses: arduino/setup-protoc@v1
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+                curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.15.5/protoc-3.15.5-linux-x86_64.zip
+                unzip protoc-3.15.5-linux-x86_64.zip -d $HOME/.local
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+                curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.15.5/protoc-3.15.5-osx-x86_64.zip
+                unzip protoc-3.15.5-osx-x86_64.zip -d $HOME/.local
+          else
+                echo "$RUNNER_OS not supported"
+                exit 1
+          fi
+          $HOME/.local/bin/protoc --version
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Checkout code
         uses: actions/checkout@v2
