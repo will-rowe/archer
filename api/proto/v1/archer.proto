@@ -1,0 +1,136 @@
+syntax = "proto3";
+package v1;
+option go_package = "api/v1";
+
+import "google/protobuf/timestamp.proto";
+
+// Archer manages sample processing prior to
+// running CLIMB pipelines.
+//
+// This includes read qc, contamination filtering,
+// compression and endpoint upload.
+service Archer {
+
+    // Start will begin processing for a sample.
+    rpc Start(stream StartRequest) returns (StartResponse) {};
+
+    // Cancel will cancel processing for a sample.
+    rpc Cancel (CancelRequest) returns (CancelResponse) {};
+
+    // GetInfo returns information on one or more preparation operations.
+    //rpc GetInfo(GetInfoRequest) returns (stream GetInfoResponse) {};
+
+    // Watch sample processing, returning messages when sample processing starts, stops or updates
+    // The current state of all currently-processing samples will be returned in the initial set
+    // of messages, with the option of also including finished samples.
+    rpc Watch (WatchRequest) returns (stream WatchResponse) {};
+
+}
+
+// State of a sample being handled by Archer.
+enum State {
+
+    // sample prep is running
+    STATE_RUNNING = 0;
+
+    // sample prep is complete with no errors
+    STATE_SUCCESS = 1;
+
+    // sample prep has stopped due to errors
+    STATE_ERROR = 2;
+
+    // sample prep was cancelled via a call to cancel()
+    STATE_CANCELLED = 3;
+}
+
+// SampleInfo describes how a sample was
+// processed by Archer.
+message SampleInfo {
+
+    // api version
+    string apiVersion = 1;
+
+    // id of the sample, as returned by start()
+    string id = 2;
+
+    // the original message used to start the sample processing
+    StartRequest startRequest = 3;
+
+    // state the sample is in
+    State state = 4;
+
+    // errors will contain encountered errors (if state is STATE_ERROR, otherwise this will be empty)
+    repeated string errors = 5;
+
+    // filesDiscovered is the number of files found for this sample
+    int32 filesDiscovered = 6;
+
+    // startTime for processing
+    google.protobuf.Timestamp startTime = 7;
+
+    // endTime for processing (unset if processing still running)
+    google.protobuf.Timestamp endTime = 8;
+
+}
+
+// StartRequest will request a sample to be processed by Archer.
+message StartRequest {
+
+    // api version
+    string apiVersion = 1;
+
+    // Input directories to search for reads to be basecalled.
+    //
+    // Currently, only one directory can be specified, but this definition allows for multiple in
+    // the future without breaking compatibility.
+    repeated string input_reads_directories = 2;
+
+    // Output directory where called reads will be placed.
+    //
+    // Reads will be sorted into subdirectories based on the sequencing run they came from.
+    string output_reads_directory = 3;
+
+}
+
+// StartResponse
+message StartResponse {
+
+    // api version
+    string apiVersion = 1;
+
+    // identifier for the sample that processing was started for (used to monitor or cancel the sample)
+    string id = 2;
+}
+
+// CancelRequest will cancel processing for a sample.
+message CancelRequest {
+
+    // api version
+    string apiVersion = 1;
+
+    // identifier for the sample
+    string id = 2;
+}
+
+// CancelResponse.
+message CancelResponse {};
+
+// WatchRequest to monitor sample processing.
+message WatchRequest{
+
+    // api version
+    string apiVersion = 1;
+
+    // sendFinished will tell Archer to also send information on samples that have completed procesing
+    bool sendFinished = 2;
+}
+
+// WatchResponse.
+message WatchResponse{
+
+    // api version
+    string apiVersion = 1;
+
+    // current state of samples
+    repeated SampleInfo samples = 2;
+}

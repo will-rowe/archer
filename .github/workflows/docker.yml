@@ -1,0 +1,49 @@
+name: docker-deploy
+
+on:
+  push:
+    branches:
+      - main
+
+  # workflow_dispatch allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    env:
+      GOFLAGS: ""
+      GOPROXY: ""
+    strategy:
+      matrix:
+        goversion: [1.16.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.goversion }}
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v1
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Compile proto
+        run: |
+          go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
+          go get -u google.golang.org/grpc
+          make proto
+
+      - name: Build
+        run: make build
+
+      - name: Docker login, build and push
+        env:
+          DOCKER_USER: ${{secrets.DOCKER_USER}}
+          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+        run: |
+          docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+          make pack
+          make push
