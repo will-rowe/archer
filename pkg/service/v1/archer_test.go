@@ -4,10 +4,8 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes"
 	"gotest.tools/assert"
 
 	api "github.com/will-rowe/archer/pkg/api/v1"
@@ -17,18 +15,6 @@ import (
 var (
 	dbLocation string = "./tmp"
 )
-
-// newSampleInfo is a helper function to
-// create a populated SampleInfo struct
-// for use in the tests.
-func newSampleInfo() *api.SampleInfo {
-	t := time.Now().In(time.UTC)
-	startTime, _ := ptypes.TimestampProto(t)
-	return &api.SampleInfo{
-		Id:        "sampleXYZ",
-		StartTime: startTime,
-	}
-}
 
 // cleanUp is called to remove the database
 // after testing completes

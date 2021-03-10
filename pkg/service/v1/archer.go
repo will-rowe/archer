@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/prologic/bitcask"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -93,13 +92,9 @@ func (a *Archer) Start(ctx context.Context, request *api.StartRequest) (*api.Sta
 	}
 
 	// create the sample info for the request
-	sampleInfo := &api.SampleInfo{
-		Id:              request.GetId(),
-		StartRequest:    request,
-		State:           api.State_STATE_RUNNING,
-		Errors:          []string{},
-		FilesDiscovered: 0,
-		StartTime:       ptypes.TimestampNow(),
+	sampleInfo, err := NewSample(SetID(request.GetId()), SetRequest(request))
+	if err != nil {
+		return nil, err
 	}
 
 	// add the sample info to the db
