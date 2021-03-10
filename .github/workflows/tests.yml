@@ -34,8 +34,8 @@ jobs:
                 echo "$RUNNER_OS not supported"
                 exit 1
           fi
+          $HOME/.local/bin/protoc --version
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-          protoc --version
 
       - name: Checkout code
         uses: actions/checkout@v2
