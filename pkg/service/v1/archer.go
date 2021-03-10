@@ -100,21 +100,19 @@ loop:
 	for {
 		select {
 		case <-a.shutdown:
+			log.Printf("stopping the watcher")
 			break loop
 		default:
 			// get data/do processing
 
-			// create a message
+			// create a message and send it back
 			resp := &api.WatchResponse{}
-
 			if err := stream.Send(resp); err != nil {
 				log.Printf("watch request failed to return a message: %v", err)
 				return err
 			}
 		}
-
 	}
-
 	return nil
 }
 

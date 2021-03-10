@@ -15,9 +15,15 @@ import (
 // default options
 const (
 	DefaultAPIVersion    = "1" // for now this is the only version available
-	DefaultgRPCport      = "9090"
 	DefaultServerAddress = "localhost"
-	DefaultLogFile       = "./archer.log"
+	DefaultgRPCport      = "9090"
+)
+
+// command line arguments shared by two or more subcommands
+var (
+	grpcAddr *string // the address of the gRPC server
+	grpcPort *string // TCP port to listen to by the gRPC server
+	logFile  *string // the log file
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -30,6 +36,11 @@ Currently supports:
 
 
 Run help on a subcommand to find out more.`,
+}
+
+// init sets the persistent flags
+func init() {
+	logFile = rootCmd.PersistentFlags().StringP("logFile", "l", "", "where to write the server log (if unset, STDERR used)")
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

@@ -5,6 +5,8 @@ go 1.16
 require (
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.4.3
+	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
+	github.com/sirupsen/logrus v1.2.0
 	github.com/spf13/cobra v1.1.3
 	golang.org/x/net v0.0.0-20210226101413-39120d07d75e // indirect
 	golang.org/x/sys v0.0.0-20210225134936-a50acf3fe073 // indirect
