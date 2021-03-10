@@ -34,7 +34,7 @@ jobs:
                 echo "$RUNNER_OS not supported"
                 exit 1
           fi
-          echo "$HOME/.local/bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
           protoc --version
 
       - name: Checkout code
