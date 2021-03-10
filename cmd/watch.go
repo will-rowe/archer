@@ -44,7 +44,7 @@ func launchWatcher() {
 	client := api.NewArcherClient(conn)
 
 	// create a watch stream request
-	log.Println("\topening to watch stream")
+	log.Println("\topening watch stream")
 	req := &api.WatchRequest{ApiVersion: DefaultAPIVersion, SendFinished: true}
 	stream, err := client.Watch(context.Background(), req)
 	if err != nil {
@@ -70,7 +70,6 @@ func launchWatcher() {
 			}
 
 			// log stream
-			log.Println("update received")
 			for _, sample := range resp.GetSamples() {
 				log.Printf("\tsample: %v", sample.GetId())
 			}

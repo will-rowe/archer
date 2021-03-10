@@ -62,7 +62,6 @@ processed by Archer.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| apiVersion | [string](#string) |  | api version |
 | id | [string](#string) |  | id of the sample, as returned by start() |
 | startRequest | [StartRequest](#v1.StartRequest) |  | the original message used to start the sample processing |
 | state | [State](#v1.State) |  | state the sample is in |
@@ -85,12 +84,9 @@ StartRequest will request a sample to be processed by Archer.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | apiVersion | [string](#string) |  | api version |
-| input_reads_directories | [string](#string) | repeated | Input directories to search for reads to be basecalled.
-
-Currently, only one directory can be specified, but this definition allows for multiple in the future without breaking compatibility. |
-| output_reads_directory | [string](#string) |  | Output directory where called reads will be placed.
-
-Reads will be sorted into subdirectories based on the sequencing run they came from. |
+| id | [string](#string) |  | id of the sample - users job to assign this |
+| inputReadsDirectories | [string](#string) | repeated | input directories to search for reads process |
+| endpoint | [string](#string) |  | endpoint for processed data |
 
 
 
@@ -176,7 +172,7 @@ compression and endpoint upload.
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| Start | [StartRequest](#v1.StartRequest) stream | [StartResponse](#v1.StartResponse) | Start will begin processing for a sample. |
+| Start | [StartRequest](#v1.StartRequest) | [StartResponse](#v1.StartResponse) | Start will begin processing for a sample. |
 | Cancel | [CancelRequest](#v1.CancelRequest) | [CancelResponse](#v1.CancelResponse) | Cancel will cancel processing for a sample. |
 | Watch | [WatchRequest](#v1.WatchRequest) | [WatchResponse](#v1.WatchResponse) stream | Watch sample processing, returning messages when sample processing starts, stops or updates The current state of all currently-processing samples will be returned in the initial set of messages, with the option of also including finished samples. |
 

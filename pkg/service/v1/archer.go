@@ -3,17 +3,24 @@ package service
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"sync"
 
-	api "github.com/will-rowe/archer/pkg/api/v1"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/prologic/bitcask"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+
+	api "github.com/will-rowe/archer/pkg/api/v1"
 )
 
-var (
-	apiVersion = "1"
-)
+// useSync will run sync on every bit cask transaction, improving stability at the expense of time
+const useSync = true
+
+// apiVersion sets the API version to use
+const apiVersion = "1"
 
 // Archer is an implementation
 // of the v1.ArcherServer.
@@ -25,35 +32,50 @@ type Archer struct {
 	// version of API implemented by the server
 	version string
 
-	// TODO: db is the in-memory db and will be replaced soon...
-	db map[string]api.SampleInfo
+	// db is a key-value store for recording sample info
+	db *bitcask.Bitcask
 
 	// shutdown is a signal to gracefully shutdown long running service processes (e.g. watch)
 	shutdown chan struct{}
 }
 
 // NewArcher creates the Archer service.
-func NewArcher() *Archer {
+func NewArcher(dbPath string) (*Archer, error) {
+
+	// open/create the db
+	db, err := bitcask.Open(dbPath, bitcask.WithSync(useSync))
+	if err != nil {
+		return nil, err
+	}
+
+	// create the service and return it
 	return &Archer{
 		version:  apiVersion,
-		db:       make(map[string]api.SampleInfo),
+		db:       db,
 		shutdown: make(chan struct{}),
-	}
+	}, nil
 }
 
 // Shutdown will stop the Archer service gracefully.
 func (a *Archer) Shutdown() error {
 
-	// TODO: db flush etc.
-
 	// signal to any watch func calls that it's time to stop
 	close(a.shutdown)
+
+	// sync and close the db
+	if err := a.db.Sync(); err != nil {
+		return err
+	}
+	if err := a.db.Close(); err != nil {
+		return err
+	}
 
 	return nil
 }
 
 // Start will begin processing for a sample.
 func (a *Archer) Start(ctx context.Context, request *api.StartRequest) (*api.StartResponse, error) {
+	log.Trace("start request received...")
 
 	// check we have received a supported API request
 	if err := a.checkAPI(request.GetApiVersion()); err != nil {
@@ -64,21 +86,38 @@ func (a *Archer) Start(ctx context.Context, request *api.StartRequest) (*api.Sta
 	a.Lock()
 	defer a.Unlock()
 
-	// check if entry already exists for provided reference number
-	//if _, ok := rs.db[request.GetParticipant().GetId()]; ok {
-	//	return nil, status.Errorf(codes.AlreadyExists,
-	//		"reference number in use: participant already exists in the registry for %v", request.GetParticipant().GetId())
-	//}
+	// check we don't already have a request for this sample
+	// TODO: we could make our lives harder by allowing samples to be repeated
+	if a.db.Has([]byte(request.GetId())) {
+		return nil, fmt.Errorf("duplicate sample can't be added to the database (%s)", request.GetId())
+	}
 
-	// TODO: validate the provided participant details
+	// create the sample info for the request
+	sampleInfo := &api.SampleInfo{
+		Id:              request.GetId(),
+		StartRequest:    request,
+		State:           api.State_STATE_RUNNING,
+		Errors:          []string{},
+		FilesDiscovered: 0,
+		StartTime:       ptypes.TimestampNow(),
+	}
 
-	// add the participant as an entry in the registry db
-	//rs.db[request.GetParticipant().GetId()] = *request.GetParticipant()
+	// add the sample info to the db
+	data, err := proto.Marshal(sampleInfo)
+	if err != nil {
+		return nil, err
+	}
+	if err := a.db.Put([]byte(sampleInfo.GetId()), data); err != nil {
+		return nil, err
+	}
+
+	// pass the sample to the processing queue
+	// TODO...
 
 	// create a response and return
 	return &api.StartResponse{
 		ApiVersion: a.version,
-		Id:         "blam",
+		Id:         sampleInfo.GetId(),
 	}, nil
 }
 
@@ -90,7 +129,7 @@ func (a *Archer) Cancel(ctx context.Context, request *api.CancelRequest) (*api.C
 
 // Watch is used to...
 func (a *Archer) Watch(request *api.WatchRequest, stream api.Archer_WatchServer) error {
-	log.Println("watch called...")
+	log.Trace("watch request received...")
 
 	// initialize the sample info array
 	// samples := []*api.SampleInfo{}

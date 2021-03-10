@@ -9,14 +9,16 @@ import (
 	"fmt"
 	"os"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
 
 // default options
-const (
+var (
 	DefaultAPIVersion    = "1" // for now this is the only version available
 	DefaultServerAddress = "localhost"
 	DefaultgRPCport      = "9090"
+	DefaultDbPath        = fmt.Sprintf("%v/.archer", getHome())
 )
 
 // command line arguments shared by two or more subcommands
@@ -50,4 +52,13 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+// getHome is used to find the user's home directory
+func getHome() string {
+	homeDir, err := homedir.Dir()
+	if err != nil {
+		panic(err)
+	}
+	return homeDir
 }

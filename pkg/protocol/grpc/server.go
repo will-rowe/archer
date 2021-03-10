@@ -55,38 +55,43 @@ func Launch(ctx context.Context, serverAPI api.ArcherServer, addr, logFile strin
 	} else {
 		log.Out = os.Stderr
 	}
+	Formatter := new(logrus.TextFormatter)
+	Formatter.TimestampFormat = "02-01-2006 15:04:05"
+	Formatter.FullTimestamp = true
+	log.SetFormatter(Formatter)
+	log.SetLevel(logrus.TraceLevel)
 
 	// set up the gRPC server with logging
 	grpcOpts := getServerOpts()
 	server := grpc.NewServer(grpcOpts...)
 
 	// register the Archer service
-	log.Info("registering the Archer service on the gRPC server")
+	log.Trace("registering the Archer service on the gRPC server")
 	api.RegisterArcherServer(server, serverAPI)
 
 	// announce on the local network address
-	log.Infof("announcing on %v", addr)
+	log.Tracef("announcing on %v", addr)
 	listen, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 
 	// prepare a graceful shutdown
-	log.Info("preparing signal notifier")
+	log.Trace("preparing signal notifier")
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 
 		// wait for incoming shutdown signal
 		for range signalChan {
-			log.Info("shut down signal received")
+			log.Trace("shut down signal received")
 			server.GracefulStop()
 			<-ctx.Done()
-			log.Info("server stopped")
+			log.Trace("server stopped")
 		}
 	}()
 
 	// start the gRPC server
-	log.Info("starting gRPC server")
+	log.Trace("starting gRPC server")
 	return server.Serve(listen)
 }

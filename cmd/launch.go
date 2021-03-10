@@ -10,6 +10,11 @@ import (
 	"github.com/will-rowe/archer/pkg/service/v1"
 )
 
+// command line options
+var (
+	dbPath *string // dbPath sets the location and filename for the Archer database
+)
+
 // launchCmd represents the launch command
 var launchCmd = &cobra.Command{
 	Use:   "launch",
@@ -23,6 +28,7 @@ var launchCmd = &cobra.Command{
 func init() {
 	grpcAddr = launchCmd.Flags().String("grpcAddress", DefaultServerAddress, "address to announce on")
 	grpcPort = launchCmd.Flags().String("grpcPort", DefaultgRPCport, "TCP port to listen to by the gRPC server")
+	dbPath = launchCmd.Flags().String("dbPath", DefaultDbPath, "location to store the Archer database")
 	rootCmd.AddCommand(launchCmd)
 }
 
@@ -33,7 +39,10 @@ func launchArcher() {
 	ctx := context.Background()
 
 	// get the service API
-	serverAPI := service.NewArcher()
+	serverAPI, err := service.NewArcher(*dbPath)
+	if err != nil {
+		log.Fatalf("could not create Archer service: %v", err)
+	}
 
 	// run the server until shutdown signal received
 	addr := fmt.Sprintf("%s:%s", *grpcAddr, *grpcPort)

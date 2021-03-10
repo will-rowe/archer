@@ -76,11 +76,14 @@ message StartRequest {
     // api version
     string apiVersion = 1;
 
+    // id of the sample - users job to assign this
+    string id = 2;
+
     // input directories to search for reads process
-    repeated string inputReadsDirectories = 2;
+    repeated string inputReadsDirectories = 3;
 
     // endpoint for processed data
-    string endpoint = 3;
+    string endpoint = 4;
 
 }
 
