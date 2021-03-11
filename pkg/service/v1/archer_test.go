@@ -51,7 +51,8 @@ func TestArcher_Start(t *testing.T) {
 func TestAPIversion(t *testing.T) {
 	v1 := "1"
 	v2 := "2"
-	a, err := NewArcher(dbLocation)
+	aInterface, shutdown, err := NewArcher(dbLocation)
+	var a *Archer = aInterface.(*Archer)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,6 +61,9 @@ func TestAPIversion(t *testing.T) {
 	}
 	if err := a.checkAPI(v2); err == nil {
 		t.Fatal("unsupported API missed by service API check")
+	}
+	if err := shutdown(); err != nil {
+		t.Fatal(err)
 	}
 	if err := cleanUp(); err != nil {
 		t.Fatal(err)

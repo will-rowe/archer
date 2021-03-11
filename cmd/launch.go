@@ -39,7 +39,7 @@ func launchArcher() {
 	ctx := context.Background()
 
 	// get the service API
-	serverAPI, err := service.NewArcher(*dbPath)
+	serverAPI, serverShutdown, err := service.NewArcher(*dbPath)
 	if err != nil {
 		log.Fatalf("could not create Archer service: %v", err)
 	}
@@ -51,7 +51,7 @@ func launchArcher() {
 	}
 
 	// clean up the service API
-	if err := serverAPI.Shutdown(); err != nil {
+	if err := serverShutdown(); err != nil {
 		log.Fatalf("could not shutdown the Archer service: %v", err)
 	}
 }

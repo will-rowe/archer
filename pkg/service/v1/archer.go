@@ -35,41 +35,28 @@ type Archer struct {
 	db *bitcask.Bitcask
 
 	// shutdown is a signal to gracefully shutdown long running service processes (e.g. watch)
-	shutdown chan struct{}
+	shutdownChan chan struct{}
 }
 
-// NewArcher creates the Archer service.
-func NewArcher(dbPath string) (*Archer, error) {
+// NewArcher creates the Archer server and returns
+// it along with the shutdown method and any
+// constructor error.
+func NewArcher(dbPath string) (api.ArcherServer, func() error, error) {
 
 	// open/create the db
 	db, err := bitcask.Open(dbPath, bitcask.WithSync(useSync))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// create the service and return it
-	return &Archer{
-		version:  apiVersion,
-		db:       db,
-		shutdown: make(chan struct{}),
-	}, nil
-}
-
-// Shutdown will stop the Archer service gracefully.
-func (a *Archer) Shutdown() error {
-
-	// signal to any watch func calls that it's time to stop
-	close(a.shutdown)
-
-	// sync and close the db
-	if err := a.db.Sync(); err != nil {
-		return err
-	}
-	if err := a.db.Close(); err != nil {
-		return err
+	a := &Archer{
+		version:      apiVersion,
+		db:           db,
+		shutdownChan: make(chan struct{}),
 	}
 
-	return nil
+	return a, a.shutdown, nil
 }
 
 // Start will begin processing for a sample.
@@ -133,7 +120,7 @@ func (a *Archer) Watch(request *api.WatchRequest, stream api.Archer_WatchServer)
 loop:
 	for {
 		select {
-		case <-a.shutdown:
+		case <-a.shutdownChan:
 			log.Printf("stopping the watcher")
 			break loop
 		default:
@@ -157,5 +144,22 @@ func (a *Archer) checkAPI(requestedAPI string) error {
 		return status.Errorf(codes.Unimplemented,
 			"unsupported API version requested: current Archer service implements version '%s', but version '%s' was requested", a.version, requestedAPI)
 	}
+	return nil
+}
+
+// shutdown will stop the Archer service gracefully.
+func (a *Archer) shutdown() error {
+
+	// signal to any watch func calls that it's time to stop
+	close(a.shutdownChan)
+
+	// sync and close the db
+	if err := a.db.Sync(); err != nil {
+		return err
+	}
+	if err := a.db.Close(); err != nil {
+		return err
+	}
+
 	return nil
 }
