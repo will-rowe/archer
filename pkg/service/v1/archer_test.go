@@ -22,9 +22,9 @@ func cleanUp() error {
 	return os.RemoveAll(dbLocation)
 }
 
-// TestArcher_Start will test the implementation of the
-// Start rpc by Archer.
-func TestArcher_Start(t *testing.T) {
+// TestArcher_Process will test the implementation of the
+// Process rpc by Archer.
+func TestArcher_Process(t *testing.T) {
 
 	// setup go mock
 	ctrl := gomock.NewController(t)
@@ -32,14 +32,14 @@ func TestArcher_Start(t *testing.T) {
 	mockClient := mock.NewMockArcherClient(ctrl)
 
 	// create a request
-	req := &api.StartRequest{ApiVersion: apiVersion, InputReadsDirectories: []string{"./some/dir"}, Endpoint: "CLIMB"}
+	req := &api.ProcessRequest{ApiVersion: apiVersion, InputReadsDirectories: []string{"./some/dir"}, Endpoint: "CLIMB"}
 
 	// run the mock
-	mockClient.EXPECT().Start(
+	mockClient.EXPECT().Process(
 		gomock.Any(),
 		req,
-	).Times(1).Return(&api.StartResponse{ApiVersion: apiVersion, Id: "archer-id"}, nil)
-	res, err := mockClient.Start(context.Background(), req)
+	).Times(1).Return(&api.ProcessResponse{ApiVersion: apiVersion, Id: "archer-id"}, nil)
+	res, err := mockClient.Process(context.Background(), req)
 
 	// check the results
 	assert.NilError(t, err)

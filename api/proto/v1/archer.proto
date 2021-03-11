@@ -11,8 +11,8 @@ import "google/protobuf/timestamp.proto";
 // compression and endpoint upload.
 service Archer {
 
-    // Start will begin processing for a sample.
-    rpc Start(StartRequest) returns (StartResponse) {};
+    // Process will begin processing for a sample.
+    rpc Process(ProcessRequest) returns (ProcessResponse) {};
 
     // Cancel will cancel processing for a sample.
     rpc Cancel (CancelRequest) returns (CancelResponse) {};
@@ -47,11 +47,11 @@ enum State {
 // processed by Archer.
 message SampleInfo {
 
-    // id of the sample, as returned by start()
+    // id of the sample, as returned by Process()
     string id = 1;
 
     // the original message used to start the sample processing
-    StartRequest startRequest = 2;
+    ProcessRequest processRequest = 2;
 
     // state the sample is in
     State state = 3;
@@ -70,8 +70,8 @@ message SampleInfo {
 
 }
 
-// StartRequest will request a sample to be processed by Archer.
-message StartRequest {
+// ProcessRequest will request a sample to be processed by Archer.
+message ProcessRequest {
 
     // api version
     string apiVersion = 1;
@@ -87,8 +87,8 @@ message StartRequest {
 
 }
 
-// StartResponse
-message StartResponse {
+// ProcessResponse
+message ProcessResponse {
 
     // api version
     string apiVersion = 1;

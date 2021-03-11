@@ -26,12 +26,12 @@ func SetID(id string) SampleOption {
 
 // SetRequest is an option setter for the NewSample constructor
 // that sets the request field of a SampleInfo struct.
-func SetRequest(request *api.StartRequest) SampleOption {
+func SetRequest(request *api.ProcessRequest) SampleOption {
 	return func(x *api.SampleInfo) error {
 
 		// TODO: validate the request?
 
-		x.StartRequest = request
+		x.ProcessRequest = request
 		return nil
 	}
 }

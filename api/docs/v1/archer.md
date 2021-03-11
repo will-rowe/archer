@@ -6,9 +6,9 @@
 - [api/proto/v1/archer.proto](#api/proto/v1/archer.proto)
     - [CancelRequest](#v1.CancelRequest)
     - [CancelResponse](#v1.CancelResponse)
+    - [ProcessRequest](#v1.ProcessRequest)
+    - [ProcessResponse](#v1.ProcessResponse)
     - [SampleInfo](#v1.SampleInfo)
-    - [StartRequest](#v1.StartRequest)
-    - [StartResponse](#v1.StartResponse)
     - [WatchRequest](#v1.WatchRequest)
     - [WatchResponse](#v1.WatchResponse)
   
@@ -53,32 +53,10 @@ CancelResponse.
 
 
 
-<a name="v1.SampleInfo"></a>
+<a name="v1.ProcessRequest"></a>
 
-### SampleInfo
-SampleInfo describes how a sample was
-processed by Archer.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | id of the sample, as returned by start() |
-| startRequest | [StartRequest](#v1.StartRequest) |  | the original message used to start the sample processing |
-| state | [State](#v1.State) |  | state the sample is in |
-| errors | [string](#string) | repeated | errors will contain encountered errors (if state is STATE_ERROR, otherwise this will be empty) |
-| filesDiscovered | [int32](#int32) |  | filesDiscovered is the number of files found for this sample |
-| startTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | startTime for processing |
-| endTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | endTime for processing (unset if processing still running) |
-
-
-
-
-
-
-<a name="v1.StartRequest"></a>
-
-### StartRequest
-StartRequest will request a sample to be processed by Archer.
+### ProcessRequest
+ProcessRequest will request a sample to be processed by Archer.
 
 
 | Field | Type | Label | Description |
@@ -93,16 +71,38 @@ StartRequest will request a sample to be processed by Archer.
 
 
 
-<a name="v1.StartResponse"></a>
+<a name="v1.ProcessResponse"></a>
 
-### StartResponse
-StartResponse
+### ProcessResponse
+ProcessResponse
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | apiVersion | [string](#string) |  | api version |
 | id | [string](#string) |  | identifier for the sample that processing was started for (used to monitor or cancel the sample) |
+
+
+
+
+
+
+<a name="v1.SampleInfo"></a>
+
+### SampleInfo
+SampleInfo describes how a sample was
+processed by Archer.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | id of the sample, as returned by Process() |
+| processRequest | [ProcessRequest](#v1.ProcessRequest) |  | the original message used to start the sample processing |
+| state | [State](#v1.State) |  | state the sample is in |
+| errors | [string](#string) | repeated | errors will contain encountered errors (if state is STATE_ERROR, otherwise this will be empty) |
+| filesDiscovered | [int32](#int32) |  | filesDiscovered is the number of files found for this sample |
+| startTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | startTime for processing |
+| endTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | endTime for processing (unset if processing still running) |
 
 
 
@@ -172,7 +172,7 @@ compression and endpoint upload.
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| Start | [StartRequest](#v1.StartRequest) | [StartResponse](#v1.StartResponse) | Start will begin processing for a sample. |
+| Process | [ProcessRequest](#v1.ProcessRequest) | [ProcessResponse](#v1.ProcessResponse) | Process will begin processing for a sample. |
 | Cancel | [CancelRequest](#v1.CancelRequest) | [CancelResponse](#v1.CancelResponse) | Cancel will cancel processing for a sample. |
 | Watch | [WatchRequest](#v1.WatchRequest) | [WatchResponse](#v1.WatchResponse) stream | Watch sample processing, returning messages when sample processing starts, stops or updates The current state of all currently-processing samples will be returned in the initial set of messages, with the option of also including finished samples. |
 

@@ -59,9 +59,9 @@ func NewArcher(dbPath string) (api.ArcherServer, func() error, error) {
 	return a, a.shutdown, nil
 }
 
-// Start will begin processing for a sample.
-func (a *Archer) Start(ctx context.Context, request *api.StartRequest) (*api.StartResponse, error) {
-	log.Trace("start request received...")
+// Process will begin processing for a sample.
+func (a *Archer) Process(ctx context.Context, request *api.ProcessRequest) (*api.ProcessResponse, error) {
+	log.Trace("process request received...")
 
 	// check we have received a supported API request
 	if err := a.checkAPI(request.GetApiVersion()); err != nil {
@@ -97,7 +97,7 @@ func (a *Archer) Start(ctx context.Context, request *api.StartRequest) (*api.Sta
 	// TODO...
 
 	// create a response and return
-	return &api.StartResponse{
+	return &api.ProcessResponse{
 		ApiVersion: a.version,
 		Id:         sampleInfo.GetId(),
 	}, nil
