@@ -6,7 +6,8 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
-	server "github.com/will-rowe/archer/pkg/protocol/grpc"
+
+	"github.com/will-rowe/archer/pkg/protocol/grpc"
 	"github.com/will-rowe/archer/pkg/service/v1"
 )
 
@@ -39,19 +40,14 @@ func launchArcher() {
 	ctx := context.Background()
 
 	// get the service API
-	serverAPI, serverShutdown, err := service.NewArcher(*dbPath)
+	serverAPI, cleanupAPI, err := service.NewArcher(*dbPath)
 	if err != nil {
 		log.Fatalf("could not create Archer service: %v", err)
 	}
 
 	// run the server until shutdown signal received
 	addr := fmt.Sprintf("%s:%s", *grpcAddr, *grpcPort)
-	if err := server.Launch(ctx, serverAPI, addr, *logFile); err != nil {
+	if err := grpc.Launch(ctx, serverAPI, cleanupAPI, addr, *logFile); err != nil {
 		log.Fatal(err)
-	}
-
-	// clean up the service API
-	if err := serverShutdown(); err != nil {
-		log.Fatalf("could not shutdown the Archer service: %v", err)
 	}
 }

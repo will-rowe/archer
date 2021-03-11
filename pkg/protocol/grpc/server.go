@@ -41,7 +41,7 @@ func getServerOpts() []grpc.ServerOption {
 }
 
 // Launch runs a gRPC server to publish the Archer service.
-func Launch(ctx context.Context, serverAPI api.ArcherServer, addr, logFile string) error {
+func Launch(ctx context.Context, serverAPI api.ArcherServer, cleanupAPI func() error, addr, logFile string) error {
 
 	// set up the logger
 	var log = logrus.New()
@@ -70,28 +70,45 @@ func Launch(ctx context.Context, serverAPI api.ArcherServer, addr, logFile strin
 	api.RegisterArcherServer(server, serverAPI)
 
 	// announce on the local network address
-	log.Tracef("announcing on %v", addr)
 	listen, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
+	log.Tracef("serving on %s", listen.Addr().String())
 
 	// prepare a graceful shutdown
 	log.Trace("preparing signal notifier")
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
 
-		// wait for incoming shutdown signal
-		for range signalChan {
-			log.Trace("shut down signal received")
-			server.GracefulStop()
-			<-ctx.Done()
-			log.Trace("server stopped")
-		}
-	}()
-
-	// start the gRPC server
+	// start the server
 	log.Trace("starting gRPC server")
-	return server.Serve(listen)
+	errorChan := make(chan error)
+	go func(errorChan chan<- error) {
+		if err := server.Serve(listen); err != nil {
+			errorChan <- err
+		}
+	}(errorChan)
+	log.Trace("ready")
+
+	// wait for interrupt or context end
+	select {
+	case <-signalChan:
+		log.Trace("shut down signal received")
+		break
+	case <-ctx.Done():
+		break
+	case <-errorChan:
+		log.Error(err)
+	}
+
+	// stop the server and clean up the service
+	log.Trace("stopping gRPC server")
+	server.GracefulStop()
+	log.Trace("cleaning up service")
+	if err := cleanupAPI(); err != nil {
+		return err
+	}
+	log.Trace("finished")
+	return nil
 }

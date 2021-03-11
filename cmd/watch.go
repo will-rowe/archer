@@ -18,7 +18,7 @@ var watchCmd = &cobra.Command{
 	Short: "Watch a running Archer service",
 	Long:  `Watch a running Archer service.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		launchWatcher()
+		watcher()
 	},
 }
 
@@ -28,8 +28,8 @@ func init() {
 	rootCmd.AddCommand(watchCmd)
 }
 
-// launchArcher sets up and runs a gRPC Archer client for watching the service
-func launchWatcher() {
+// watcher sets up and runs a gRPC Archer client for watching the service
+func watcher() {
 
 	// connect to the gRPC server
 	addr := fmt.Sprintf("%s:%s", *grpcAddr, *grpcPort)

@@ -160,6 +160,5 @@ func (a *Archer) shutdown() error {
 	if err := a.db.Close(); err != nil {
 		return err
 	}
-
 	return nil
 }
