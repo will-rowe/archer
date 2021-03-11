@@ -73,9 +73,20 @@ func (a *Archer) Process(ctx context.Context, request *api.ProcessRequest) (*api
 	defer a.Unlock()
 
 	// check we don't already have a request for this sample
-	// TODO: we could make our lives harder by allowing samples to be repeated
+	// TODO: we could make our lives harder by allowing samples to be repeated/edited etc.
 	if a.db.Has([]byte(request.GetId())) {
-		return nil, fmt.Errorf("duplicate sample can't be added to the database (%s)", request.GetId())
+		return nil, status.Errorf(
+			codes.AlreadyExists,
+			fmt.Sprintf("duplicate sample can't be added to the database (%s)", request.GetId()),
+		)
+	}
+
+	// validate the request
+	if err := ValidateProcessRequest(request); err != nil {
+		return nil, status.Errorf(
+			codes.NotFound,
+			fmt.Sprintf("request failed validation: %v", err),
+		)
 	}
 
 	// create the sample info for the request

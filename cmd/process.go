@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 
 	api "github.com/will-rowe/archer/pkg/api/v1"
 )
@@ -54,7 +55,7 @@ func process() {
 
 	// connect to the gRPC server
 	addr := fmt.Sprintf("%s:%s", *grpcAddr, *grpcPort)
-	log.Printf("\tdialing %v...", addr)
+	log.Printf("dialing %v...", addr)
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("could not connect to the Archer gRPC server: %v", err)
@@ -67,7 +68,8 @@ func process() {
 	// send the request
 	resp, err := client.Process(context.Background(), processRequest)
 	if err != nil {
-		log.Fatalf("could not send process request: %v", err)
+		errStatus, _ := status.FromError(err)
+		log.Fatal(errStatus.Message())
 	}
 
 	// check response

@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"os"
 
 	"github.com/golang/protobuf/ptypes"
 
@@ -58,4 +60,19 @@ func NewSample(options ...SampleOption) (*api.SampleInfo, error) {
 
 	// return the initialised struct
 	return s, nil
+}
+
+// ValidateProcessRequest will validate a sample process request.
+func ValidateProcessRequest(request *api.ProcessRequest) error {
+
+	// check input directories exist
+	for _, inDir := range request.GetInputReadsDirectories() {
+		if _, err := os.Stat(inDir); err != nil {
+			return fmt.Errorf("can't access %v", inDir)
+		}
+	}
+
+	// TODO: other checks (e.g. api endpoint)
+
+	return nil
 }
