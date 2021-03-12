@@ -2,16 +2,16 @@
 package service
 
 import (
-	"context"
+	"errors"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/prologic/bitcask"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 
+	"github.com/will-rowe/archer/pkg/amplicons"
 	api "github.com/will-rowe/archer/pkg/api/v1"
 )
 
@@ -21,131 +21,97 @@ const useSync = true
 // apiVersion sets the API version to use
 const apiVersion = "1"
 
-// Archer is an implementation
-// of the v1.ArcherServer.
+// ArcherOption is a wrapper struct used to pass functional
+// options to the Archer constructor.
+type ArcherOption func(archer *Archer) error
+
+// Archer is an implementation of the v1.ArcherServer.
+//
+// It includes some extra data
+// and methods to provide extra
+// functionality.
 type Archer struct {
 
-	// db lock
+	// service lock
 	sync.RWMutex
 
 	// version of API implemented by the server
 	version string
 
+	// shutdown is a signal to gracefully shutdown long running service processes (e.g. watch)
+	shutdownChan chan struct{}
+
 	// db is a key-value store for recording sample info
 	db *bitcask.Bitcask
 
-	// shutdown is a signal to gracefully shutdown long running service processes (e.g. watch)
-	shutdownChan chan struct{}
+	// manifest is the ARTIC primer scheme manifest
+	manifest *api.Manifest
+
+	// ampliconCache is an in-memory cache of the schemes used for the current session
+	//ampliconCache map[string][]byte
+}
+
+// SetDb is an option setter for the NewArcher constructor
+// that opens a db at the specified path and sets the
+// appropriate field of the Archer struct.
+func SetDb(dbPath string) ArcherOption {
+	return func(x *Archer) error {
+
+		// open/create the db
+		db, err := bitcask.Open(dbPath, bitcask.WithSync(useSync))
+		if err != nil {
+			return err
+		}
+
+		// attach it to the Archer instance
+		x.db = db
+		return nil
+	}
+}
+
+// SetManifest is an option setter for the NewArcher constructor
+// that downloads and opens a manifest and sets the appropriate
+// field of the Archer struct.
+func SetManifest(manifestURL string) ArcherOption {
+	return func(x *Archer) error {
+
+		// download the manifest and unpack
+		manifest, err := amplicons.GetManifest(manifestURL)
+		if err != nil {
+			return err
+		}
+
+		// attach it to the Archer instance
+		x.manifest = manifest
+		return nil
+	}
 }
 
 // NewArcher creates the Archer server and returns
 // it along with the shutdown method and any
 // constructor error.
-func NewArcher(dbPath string) (api.ArcherServer, func() error, error) {
+func NewArcher(options ...ArcherOption) (api.ArcherServer, func() error, error) {
 
-	// open/create the db
-	db, err := bitcask.Open(dbPath, bitcask.WithSync(useSync))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// create the service and return it
+	// create the service
 	a := &Archer{
 		version:      apiVersion,
-		db:           db,
 		shutdownChan: make(chan struct{}),
 	}
 
-	return a, a.shutdown, nil
-}
-
-// Process will begin processing for a sample.
-func (a *Archer) Process(ctx context.Context, request *api.ProcessRequest) (*api.ProcessResponse, error) {
-	log.Trace("process request received...")
-
-	// check we have received a supported API request
-	if err := a.checkAPI(request.GetApiVersion()); err != nil {
-		return nil, err
-	}
-
-	// lock the db for RW access
-	a.Lock()
-	defer a.Unlock()
-
-	// check we don't already have a request for this sample
-	// TODO: we could make our lives harder by allowing samples to be repeated/edited etc.
-	if a.db.Has([]byte(request.GetId())) {
-		return nil, status.Errorf(
-			codes.AlreadyExists,
-			fmt.Sprintf("duplicate sample can't be added to the database (%s)", request.GetId()),
-		)
-	}
-
-	// validate the request
-	if err := ValidateProcessRequest(request); err != nil {
-		return nil, status.Errorf(
-			codes.NotFound,
-			fmt.Sprintf("request failed validation: %v", err),
-		)
-	}
-
-	// create the sample info for the request
-	sampleInfo, err := NewSample(SetID(request.GetId()), SetRequest(request))
-	if err != nil {
-		return nil, err
-	}
-
-	// add the sample info to the db
-	data, err := proto.Marshal(sampleInfo)
-	if err != nil {
-		return nil, err
-	}
-	if err := a.db.Put([]byte(sampleInfo.GetId()), data); err != nil {
-		return nil, err
-	}
-
-	// pass the sample to the processing queue
-	// TODO...
-
-	// create a response and return
-	return &api.ProcessResponse{
-		ApiVersion: a.version,
-		Id:         sampleInfo.GetId(),
-	}, nil
-}
-
-// Cancel is used to...
-func (a *Archer) Cancel(ctx context.Context, request *api.CancelRequest) (*api.CancelResponse, error) {
-
-	return nil, nil
-}
-
-// Watch is used to...
-func (a *Archer) Watch(request *api.WatchRequest, stream api.Archer_WatchServer) error {
-	log.Trace("watch request received...")
-
-	// initialize the sample info array
-	// samples := []*api.SampleInfo{}
-
-	// loop until cancel requested
-loop:
-	for {
-		select {
-		case <-a.shutdownChan:
-			log.Printf("stopping the watcher")
-			break loop
-		default:
-			// get data/do processing
-
-			// create a message and send it back
-			resp := &api.WatchResponse{}
-			if err := stream.Send(resp); err != nil {
-				log.Printf("watch request failed to return a message: %v", err)
-				return err
-			}
+	// set options
+	for _, option := range options {
+		if err := option(a); err != nil {
+			return nil, nil, err
 		}
 	}
-	return nil
+
+	// TODO: check a db is functioning
+	if a.db == nil {
+		return nil, nil, errors.New("dbPath is required")
+	}
+
+	// return the instance and it's shutdown method
+	return a, a.shutdown, nil
 }
 
 // checkAPI checks if requested API version is supported
@@ -171,5 +137,30 @@ func (a *Archer) shutdown() error {
 	if err := a.db.Close(); err != nil {
 		return err
 	}
+	return nil
+}
+
+// validateRequest will validate a service request.
+func (a *Archer) validateRequest(request *api.ProcessRequest) error {
+
+	// TODO: use type switch to validate more than just Process requests
+
+	// check input files exist
+	for _, f := range request.GetInputFASTQfiles() {
+		if _, err := os.Stat(f); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("%v does not exist", f)
+			}
+			return fmt.Errorf("can't access %v", f)
+		}
+	}
+
+	// check requested scheme is in the ARTIC manifest
+	if err := amplicons.CheckManifest(a.manifest, request.GetScheme(), request.GetSchemeVersion()); err != nil {
+		return err
+	}
+
+	// TODO: other checks (e.g. api endpoint)
+
 	return nil
 }

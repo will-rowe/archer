@@ -71,7 +71,7 @@ func watcher() {
 
 			// log stream
 			for _, sample := range resp.GetSamples() {
-				log.Printf("\tsample: %v", sample.GetId())
+				log.Printf("\tsample: %v", sample.GetSampleID())
 			}
 		}
 	}()

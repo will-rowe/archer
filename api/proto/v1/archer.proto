@@ -3,6 +3,7 @@ package v1;
 option go_package = "api/v1";
 
 import "google/protobuf/timestamp.proto";
+//import "api/proto/v1/schemes.proto";
 
 // Archer manages sample processing prior to
 // running CLIMB pipelines.
@@ -47,8 +48,8 @@ enum State {
 // processed by Archer.
 message SampleInfo {
 
-    // id of the sample, as returned by Process()
-    string id = 1;
+    // sampleID is the sample identifier - as returned by Process()
+    string sampleID = 1;
 
     // the original message used to start the sample processing
     ProcessRequest processRequest = 2;
@@ -76,15 +77,20 @@ message ProcessRequest {
     // api version
     string apiVersion = 1;
 
-    // id of the sample - users job to assign this
-    string id = 2;
+    // sampleID is the sample identifier - users job to assign this and make it unique
+    string sampleID = 2;
 
-    // input directories to search for reads process
-    repeated string inputReadsDirectories = 3;
+    // inputFASTQfiles for this sample
+    repeated string inputFASTQfiles = 3;
 
-    // endpoint for processed data
-    string endpoint = 4;
+    // scheme denotes the amplicon scheme used for the sample
+    string scheme = 4;
 
+    // schemeVersion denotes the amplicon scheme version used
+    int32 schemeVersion  = 5;
+
+    // endpoint for processed data to be sent
+    string endpoint = 6;
 }
 
 // ProcessResponse

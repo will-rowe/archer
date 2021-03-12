@@ -1,19 +1,13 @@
 package service
 
 import (
-	"context"
 	"os"
 	"testing"
-
-	"github.com/golang/mock/gomock"
-	"gotest.tools/assert"
-
-	api "github.com/will-rowe/archer/pkg/api/v1"
-	mock "github.com/will-rowe/archer/pkg/mock"
 )
 
 var (
-	dbLocation string = "./tmp"
+	dbLocation  string = "./tmp"
+	manifestURL string = "https://raw.githubusercontent.com/artic-network/primer-schemes/master/schemes_manifest.json"
 )
 
 // cleanUp is called to remove the database
@@ -22,36 +16,12 @@ func cleanUp() error {
 	return os.RemoveAll(dbLocation)
 }
 
-// TestArcher_Process will test the implementation of the
-// Process rpc by Archer.
-func TestArcher_Process(t *testing.T) {
-
-	// setup go mock
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockClient := mock.NewMockArcherClient(ctrl)
-
-	// create a request
-	req := &api.ProcessRequest{ApiVersion: apiVersion, InputReadsDirectories: []string{"./some/dir"}, Endpoint: "CLIMB"}
-
-	// run the mock
-	mockClient.EXPECT().Process(
-		gomock.Any(),
-		req,
-	).Times(1).Return(&api.ProcessResponse{ApiVersion: apiVersion, Id: "archer-id"}, nil)
-	res, err := mockClient.Process(context.Background(), req)
-
-	// check the results
-	assert.NilError(t, err)
-	assert.Equal(t, res.ApiVersion, apiVersion)
-}
-
 // TestAPIversion will check that API version requests
 // are handled appropriately.
 func TestAPIversion(t *testing.T) {
 	v1 := "1"
 	v2 := "2"
-	aInterface, shutdown, err := NewArcher(dbLocation)
+	aInterface, shutdown, err := NewArcher(SetDb(dbLocation))
 	var a *Archer = aInterface.(*Archer)
 	if err != nil {
 		t.Fatal(err)
@@ -62,6 +32,24 @@ func TestAPIversion(t *testing.T) {
 	if err := a.checkAPI(v2); err == nil {
 		t.Fatal("unsupported API missed by service API check")
 	}
+	if err := shutdown(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestPrimerScheme will make sure the manifest and individual
+// primer schemes can be downloaded.
+func TestPrimerScheme(t *testing.T) {
+	aInterface, shutdown, err := NewArcher(SetDb(dbLocation), SetManifest(manifestURL))
+	var a *Archer = aInterface.(*Archer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// TODO: check each scheme in the manifest can be download
+	_ = a
+
+	// final test so remove the tmp db
 	if err := shutdown(); err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,8 @@ import (
 
 // command line options
 var (
-	dbPath *string // dbPath sets the location and filename for the Archer database
+	dbPath      *string // dbPath sets the location and filename for the Archer database
+	manifestURL *string // manifestURL tells archer where to collect the ARTIC primer scheme manifest
 )
 
 // launchCmd represents the launch command
@@ -30,6 +31,7 @@ func init() {
 	grpcAddr = launchCmd.Flags().String("grpcAddress", DefaultServerAddress, "address to announce on")
 	grpcPort = launchCmd.Flags().String("grpcPort", DefaultgRPCport, "TCP port to listen to by the gRPC server")
 	dbPath = launchCmd.Flags().String("dbPath", DefaultDbPath, "location to store the Archer database")
+	manifestURL = launchCmd.Flags().String("manifestURL", DefaultManifestURL, "the ARTIC primer scheme manifest url")
 	rootCmd.AddCommand(launchCmd)
 }
 
@@ -40,7 +42,7 @@ func launchArcher() {
 	ctx := context.Background()
 
 	// get the service API
-	serverAPI, cleanupAPI, err := service.NewArcher(*dbPath)
+	serverAPI, cleanupAPI, err := service.NewArcher(service.SetDb(*dbPath), service.SetManifest(*manifestURL))
 	if err != nil {
 		log.Fatalf("could not create Archer service: %v", err)
 	}

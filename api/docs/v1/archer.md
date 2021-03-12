@@ -62,9 +62,11 @@ ProcessRequest will request a sample to be processed by Archer.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | apiVersion | [string](#string) |  | api version |
-| id | [string](#string) |  | id of the sample - users job to assign this |
-| inputReadsDirectories | [string](#string) | repeated | input directories to search for reads process |
-| endpoint | [string](#string) |  | endpoint for processed data |
+| sampleID | [string](#string) |  | sampleID is the sample identifier - users job to assign this and make it unique |
+| inputFASTQfiles | [string](#string) | repeated | inputFASTQfiles for this sample |
+| scheme | [string](#string) |  | scheme denotes the amplicon scheme used for the sample |
+| schemeVersion | [int32](#int32) |  | schemeVersion denotes the amplicon scheme version used |
+| endpoint | [string](#string) |  | endpoint for processed data to be sent |
 
 
 
@@ -96,7 +98,7 @@ processed by Archer.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | id of the sample, as returned by Process() |
+| sampleID | [string](#string) |  | sampleID is the sample identifier - as returned by Process() |
 | processRequest | [ProcessRequest](#v1.ProcessRequest) |  | the original message used to start the sample processing |
 | state | [State](#v1.State) |  | state the sample is in |
 | errors | [string](#string) | repeated | errors will contain encountered errors (if state is STATE_ERROR, otherwise this will be empty) |

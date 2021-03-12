@@ -2,8 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
-	"os"
 
 	"github.com/golang/protobuf/ptypes"
 
@@ -21,19 +19,18 @@ func SetID(id string) SampleOption {
 		if len(id) == 0 {
 			return errors.New("sample requires an ID to be provided")
 		}
-		x.Id = id
+		x.SampleID = id
 		return nil
 	}
 }
 
 // SetRequest is an option setter for the NewSample constructor
-// that sets the request field of a SampleInfo struct.
+// that sets the request field of a SampleInfo struct and
+// populates some additional data.
 func SetRequest(request *api.ProcessRequest) SampleOption {
 	return func(x *api.SampleInfo) error {
-
-		// TODO: validate the request?
-
 		x.ProcessRequest = request
+		x.FilesDiscovered = int32(len(request.GetInputFASTQfiles()))
 		return nil
 	}
 }
@@ -44,6 +41,8 @@ func NewSample(options ...SampleOption) (*api.SampleInfo, error) {
 
 	// construct
 	s := &api.SampleInfo{
+		SampleID:        "",
+		ProcessRequest:  nil,
 		State:           api.State_STATE_RUNNING,
 		Errors:          []string{},
 		FilesDiscovered: 0,
@@ -52,27 +51,11 @@ func NewSample(options ...SampleOption) (*api.SampleInfo, error) {
 
 	// set options
 	for _, option := range options {
-		err := option(s)
-		if err != nil {
+		if err := option(s); err != nil {
 			return nil, err
 		}
 	}
 
 	// return the initialised struct
 	return s, nil
-}
-
-// ValidateProcessRequest will validate a sample process request.
-func ValidateProcessRequest(request *api.ProcessRequest) error {
-
-	// check input directories exist
-	for _, inDir := range request.GetInputReadsDirectories() {
-		if _, err := os.Stat(inDir); err != nil {
-			return fmt.Errorf("can't access %v", inDir)
-		}
-	}
-
-	// TODO: other checks (e.g. api endpoint)
-
-	return nil
 }
