@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/prologic/bitcask"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -48,7 +49,7 @@ type Archer struct {
 	manifest *api.Manifest
 
 	// ampliconCache is an in-memory cache of the schemes used for the current session
-	//ampliconCache map[string][]byte
+	ampliconCache map[string]*amplicons.AmpliconSet
 }
 
 // SetDb is an option setter for the NewArcher constructor
@@ -94,8 +95,9 @@ func NewArcher(options ...ArcherOption) (api.ArcherServer, func() error, error) 
 
 	// create the service
 	a := &Archer{
-		version:      apiVersion,
-		shutdownChan: make(chan struct{}),
+		version:       apiVersion,
+		shutdownChan:  make(chan struct{}),
+		ampliconCache: make(map[string]*amplicons.AmpliconSet),
 	}
 
 	// set options
@@ -146,6 +148,7 @@ func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 	// TODO: use type switch to validate more than just Process requests
 
 	// check input files exist
+	log.Trace("checking input files")
 	for _, f := range request.GetInputFASTQfiles() {
 		if _, err := os.Stat(f); err != nil {
 			if os.IsNotExist(err) {
@@ -156,8 +159,23 @@ func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 	}
 
 	// check requested scheme is in the ARTIC manifest
-	if err := amplicons.CheckManifest(a.manifest, request.GetScheme(), request.GetSchemeVersion()); err != nil {
+	// and update the request the appropriate scheme tag
+	// for this scheme
+	log.Trace("checking manifest")
+	if schemeTag, err := amplicons.CheckManifest(a.manifest, request.GetScheme(), request.GetSchemeVersion()); err != nil {
 		return err
+	} else {
+		request.Scheme = schemeTag
+	}
+
+	// check that the current session has the requested amplicon set stored, or download it now
+	key := fmt.Sprintf("%v-%v", request.GetScheme(), request.GetSchemeVersion())
+	if _, ok := a.ampliconCache[key]; !ok {
+		ampliconSet, err := amplicons.NewAmpliconSet(a.manifest, request.GetScheme(), request.GetSchemeVersion())
+		if err != nil {
+			return err
+		}
+		a.ampliconCache[key] = ampliconSet
 	}
 
 	// TODO: other checks (e.g. api endpoint)
