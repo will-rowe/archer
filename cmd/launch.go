@@ -4,17 +4,20 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
+	"runtime"
 
 	"github.com/spf13/cobra"
-	server "github.com/will-rowe/archer/pkg/protocol/grpc"
+
+	"github.com/will-rowe/archer/pkg/protocol/grpc"
 	"github.com/will-rowe/archer/pkg/service/v1"
 )
 
-// command line arguments
+// command line options
 var (
-	grpcPort *string // TCP port to listen to by the gRPC server
-	logFile  *string // the log file
+	dbPath        *string // dbPath sets the location and filename for the Archer database
+	manifestURL   *string // manifestURL tells archer where to collect the ARTIC primer scheme manifest
+	numWorkers    *int    // number of concurrent request handlers to use
+	numProcessors *int    // number of processors to use
 )
 
 // launchCmd represents the launch command
@@ -28,42 +31,31 @@ var launchCmd = &cobra.Command{
 }
 
 func init() {
-	grpcPort = launchCmd.Flags().StringP("grpcPort", "g", DefaultgRPCport, "TCP port to listen to by the gRPC server")
-	logFile = launchCmd.Flags().StringP("logFile", "l", DefaultLogFile, "where to write the server log (use '-l -' for logging to standard out)")
+	grpcAddr = launchCmd.Flags().String("grpcAddress", DefaultServerAddress, "address to announce on")
+	grpcPort = launchCmd.Flags().String("grpcPort", DefaultgRPCport, "TCP port to listen to by the gRPC server")
+	dbPath = launchCmd.Flags().String("dbPath", DefaultDbPath, "location to store the Archer database")
+	manifestURL = launchCmd.Flags().String("manifestURL", DefaultManifestURL, "the ARTIC primer scheme manifest url")
+	numWorkers = launchCmd.Flags().Int("numWorkers", 2, "number of concurrent request handlers to use")
+	numProcessors = launchCmd.Flags().IntP("numProcessors", "p", -1, "number of processors to use (-1 == all)")
 	rootCmd.AddCommand(launchCmd)
 }
 
 // launchArcher sets up and runs the gRPC Archer service
 func launchArcher() {
-
-	// set up the log
-	if *logFile != "-" {
-		file, err := os.OpenFile(*logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
-		}
-		defer file.Close()
-		log.SetOutput(file)
-	}
-	log.Println("starting Archer...")
+	runtime.GOMAXPROCS(*numProcessors)
 
 	// get top level context
 	ctx := context.Background()
 
 	// get the service API
-	serverAPI := service.NewArcher()
+	serverAPI, cleanupAPI, err := service.NewArcher(service.SetNumWorkers(*numWorkers), service.SetDb(*dbPath), service.SetManifest(*manifestURL))
+	if err != nil {
+		log.Fatalf("could not create Archer service: %v", err)
+	}
 
 	// run the server until shutdown signal received
-	if err := server.Launch(ctx, serverAPI, *grpcPort); err != nil {
+	addr := fmt.Sprintf("%s:%s", *grpcAddr, *grpcPort)
+	if err := grpc.Launch(ctx, serverAPI, cleanupAPI, addr, *logFile); err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
-
-	// clean up the service API
-	if err := serverAPI.Shutdown(); err != nil {
-		log.Fatalf("could not shutdown the Archer service: %v", err)
-	}
-
-	log.Println("finished")
 }

@@ -6,9 +6,11 @@
 - [api/proto/v1/archer.proto](#api/proto/v1/archer.proto)
     - [CancelRequest](#v1.CancelRequest)
     - [CancelResponse](#v1.CancelResponse)
+    - [ProcessRequest](#v1.ProcessRequest)
+    - [ProcessResponse](#v1.ProcessResponse)
     - [SampleInfo](#v1.SampleInfo)
-    - [StartRequest](#v1.StartRequest)
-    - [StartResponse](#v1.StartResponse)
+    - [SampleStats](#v1.SampleStats)
+    - [SampleStats.AmpliconCoverageEntry](#v1.SampleStats.AmpliconCoverageEntry)
     - [WatchRequest](#v1.WatchRequest)
     - [WatchResponse](#v1.WatchResponse)
   
@@ -53,6 +55,42 @@ CancelResponse.
 
 
 
+<a name="v1.ProcessRequest"></a>
+
+### ProcessRequest
+ProcessRequest will request a sample to be processed by Archer.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| apiVersion | [string](#string) |  | api version |
+| sampleID | [string](#string) |  | sampleID is the sample identifier - users job to assign this and make it unique |
+| inputFASTQfiles | [string](#string) | repeated | inputFASTQfiles for this sample |
+| scheme | [string](#string) |  | scheme denotes the amplicon scheme used for the sample |
+| schemeVersion | [int32](#int32) |  | schemeVersion denotes the amplicon scheme version used |
+| endpoint | [string](#string) |  | endpoint for processed data to be sent |
+
+
+
+
+
+
+<a name="v1.ProcessResponse"></a>
+
+### ProcessResponse
+ProcessResponse
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| apiVersion | [string](#string) |  | api version |
+| id | [string](#string) |  | identifier for the sample that processing was started for (used to monitor or cancel the sample) |
+
+
+
+
+
+
 <a name="v1.SampleInfo"></a>
 
 ### SampleInfo
@@ -62,51 +100,51 @@ processed by Archer.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| apiVersion | [string](#string) |  | api version |
-| id | [string](#string) |  | id of the sample, as returned by start() |
-| startRequest | [StartRequest](#v1.StartRequest) |  | the original message used to start the sample processing |
+| sampleID | [string](#string) |  | sampleID is the sample identifier - as returned by Process() |
+| processRequest | [ProcessRequest](#v1.ProcessRequest) |  | the original message used to start the sample processing |
 | state | [State](#v1.State) |  | state the sample is in |
 | errors | [string](#string) | repeated | errors will contain encountered errors (if state is STATE_ERROR, otherwise this will be empty) |
 | filesDiscovered | [int32](#int32) |  | filesDiscovered is the number of files found for this sample |
 | startTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | startTime for processing |
 | endTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | endTime for processing (unset if processing still running) |
+| processStats | [SampleStats](#v1.SampleStats) |  | processStats contains details on the processing request output |
 
 
 
 
 
 
-<a name="v1.StartRequest"></a>
+<a name="v1.SampleStats"></a>
 
-### StartRequest
-StartRequest will request a sample to be processed by Archer.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| apiVersion | [string](#string) |  | api version |
-| input_reads_directories | [string](#string) | repeated | Input directories to search for reads to be basecalled.
-
-Currently, only one directory can be specified, but this definition allows for multiple in the future without breaking compatibility. |
-| output_reads_directory | [string](#string) |  | Output directory where called reads will be placed.
-
-Reads will be sorted into subdirectories based on the sequencing run they came from. |
-
-
-
-
-
-
-<a name="v1.StartResponse"></a>
-
-### StartResponse
-StartResponse
+### SampleStats
+SampleStats stores basic numbers from the
+sample processing.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| apiVersion | [string](#string) |  | api version |
-| id | [string](#string) |  | identifier for the sample that processing was started for (used to monitor or cancel the sample) |
+| totalReads | [int32](#int32) |  | total reads across all FASTQs for a sample |
+| keptReads | [int32](#int32) |  | kept reads across all FASTQs for a sample |
+| ampliconCoverage | [SampleStats.AmpliconCoverageEntry](#v1.SampleStats.AmpliconCoverageEntry) | repeated | ampliconCoverage counts the numer of reads assigned to each amplicon for a sample |
+| meanAmpliconSize | [int32](#int32) |  | meanAmpliconSize is the mean size of the reference amplicons (incl. primers) |
+| lengthMax | [int32](#int32) |  | lengthMax is the maximum length allowed for a read to be kept. |
+| lengthMin | [int32](#int32) |  | minLength is the minimum length allowed for a read to be kept. |
+
+
+
+
+
+
+<a name="v1.SampleStats.AmpliconCoverageEntry"></a>
+
+### SampleStats.AmpliconCoverageEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [int32](#int32) |  |  |
 
 
 
@@ -154,10 +192,11 @@ State of a sample being handled by Archer.
 
 | Name | Number | Description |
 | ---- | ------ | ----------- |
-| STATE_RUNNING | 0 | sample prep is running |
-| STATE_SUCCESS | 1 | sample prep is complete with no errors |
-| STATE_ERROR | 2 | sample prep has stopped due to errors |
-| STATE_CANCELLED | 3 | sample prep was cancelled via a call to cancel() |
+| UNKNOWN | 0 | sample is queued |
+| RUNNING | 1 | sample prep is running |
+| SUCCESS | 2 | sample prep is complete with no errors |
+| ERROR | 3 | sample prep has stopped due to errors |
+| CANCELLED | 4 | sample prep was cancelled via a call to cancel() |
 
 
  
@@ -176,7 +215,7 @@ compression and endpoint upload.
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| Start | [StartRequest](#v1.StartRequest) stream | [StartResponse](#v1.StartResponse) | Start will begin processing for a sample. |
+| Process | [ProcessRequest](#v1.ProcessRequest) | [ProcessResponse](#v1.ProcessResponse) | Process will begin processing for a sample. |
 | Cancel | [CancelRequest](#v1.CancelRequest) | [CancelResponse](#v1.CancelResponse) | Cancel will cancel processing for a sample. |
 | Watch | [WatchRequest](#v1.WatchRequest) | [WatchResponse](#v1.WatchResponse) stream | Watch sample processing, returning messages when sample processing starts, stops or updates The current state of all currently-processing samples will be returned in the initial set of messages, with the option of also including finished samples. |
 

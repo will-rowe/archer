@@ -1,52 +1,19 @@
 package service
 
 import (
-	"context"
+	"os"
 	"testing"
-	"time"
-
-	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes"
-	"gotest.tools/assert"
-
-	api "github.com/will-rowe/archer/pkg/api/v1"
-	mock "github.com/will-rowe/archer/pkg/mock"
 )
 
-// newSampleInfo is a helper function to
-// create a populated SampleInfo struct
-// for use in the tests.
-func newSampleInfo() *api.SampleInfo {
-	t := time.Now().In(time.UTC)
-	startTime, _ := ptypes.TimestampProto(t)
-	return &api.SampleInfo{
-		Id:        "sampleXYZ",
-		StartTime: startTime,
-	}
-}
+var (
+	dbLocation  string = "./tmp"
+	manifestURL string = "https://raw.githubusercontent.com/artic-network/primer-schemes/master/schemes_manifest.json"
+)
 
-// TestArcher_Start will test the implementation of the
-// Start rpc by Archer.
-func TestArcher_Start(t *testing.T) {
-
-	// setup go mock
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockClient := mock.NewMockArcherClient(ctrl)
-
-	// create a request
-	req := &api.StartRequest{ApiVersion: apiVersion, InputReadsDirectories: []string{"./some/dir"}, Endpoint: "CLIMB"}
-
-	// run the mock
-	mockClient.EXPECT().Start(
-		gomock.Any(),
-		req,
-	).Times(1).Return(&api.StartResponse{ApiVersion: apiVersion, Id: "archer-id"}, nil)
-	res, err := mockClient.Start(context.Background(), req)
-
-	// check the results
-	assert.NilError(t, err)
-	assert.Equal(t, res.ApiVersion, apiVersion)
+// cleanUp is called to remove the database
+// after testing completes
+func cleanUp() error {
+	return os.RemoveAll(dbLocation)
 }
 
 // TestAPIversion will check that API version requests
@@ -54,11 +21,39 @@ func TestArcher_Start(t *testing.T) {
 func TestAPIversion(t *testing.T) {
 	v1 := "1"
 	v2 := "2"
-	a := NewArcher()
+	aInterface, shutdown, err := NewArcher(SetDb(dbLocation))
+	var a *Archer = aInterface.(*Archer)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := a.checkAPI(v1); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.checkAPI(v2); err == nil {
 		t.Fatal("unsupported API missed by service API check")
+	}
+	if err := shutdown(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestPrimerScheme will make sure the manifest and individual
+// primer schemes can be downloaded.
+func TestPrimerScheme(t *testing.T) {
+	aInterface, shutdown, err := NewArcher(SetDb(dbLocation), SetManifest(manifestURL))
+	var a *Archer = aInterface.(*Archer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// TODO: check each scheme in the manifest can be download
+	_ = a
+
+	// final test so remove the tmp db
+	if err := shutdown(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cleanUp(); err != nil {
+		t.Fatal(err)
 	}
 }

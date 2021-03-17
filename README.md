@@ -84,3 +84,8 @@ This is all a work in progress. Things to do:
 * daemonise the server
 * implement the client in the app
 * intergrate with [herald](www.github.com/will-rowe/herald)
+
+### Limitations/TODOs
+
+* there is no index for amplicon bottom-k sketches, so each read loops over the ~90 amplicon sketches and picks the best one - not great
+* if something goes wrong during the sample processing, it is just marked as errored and there is no attempt to try again/fix it

@@ -1,0 +1,21 @@
+syntax = "proto3";
+option go_package = "api/v1";
+
+// Manifest represents the structure used by ARTIC to store scheme metadata.
+message Manifest {
+    string metadata = 1;
+    string repository = 2;
+    string latest_doi = 3;
+    string license = 4;
+    map<string, SchemeMetadata> schemes = 5;
+}
+
+// SchemeMetadata.
+message SchemeMetadata {
+    repeated string aliases = 1;
+    int32 latest_version = 2;
+    map<string, string> primer_urls = 3;
+    map<string, string> reference_urls = 4;
+    map<string, string> primer_sha256_checksums = 5;
+    map<string, string> reference_sha256_checksums = 6;
+}

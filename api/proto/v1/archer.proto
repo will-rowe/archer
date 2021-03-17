@@ -3,6 +3,7 @@ package v1;
 option go_package = "api/v1";
 
 import "google/protobuf/timestamp.proto";
+//import "api/proto/v1/schemes.proto";
 
 // Archer manages sample processing prior to
 // running CLIMB pipelines.
@@ -11,8 +12,8 @@ import "google/protobuf/timestamp.proto";
 // compression and endpoint upload.
 service Archer {
 
-    // Start will begin processing for a sample.
-    rpc Start(StartRequest) returns (StartResponse) {};
+    // Process will begin processing for a sample.
+    rpc Process(ProcessRequest) returns (ProcessResponse) {};
 
     // Cancel will cancel processing for a sample.
     rpc Cancel (CancelRequest) returns (CancelResponse) {};
@@ -30,28 +31,54 @@ service Archer {
 // State of a sample being handled by Archer.
 enum State {
 
+    // sample is queued
+    UNKNOWN = 0;
+
     // sample prep is running
-    STATE_RUNNING = 0;
+    RUNNING = 1;
 
     // sample prep is complete with no errors
-    STATE_SUCCESS = 1;
+    SUCCESS = 2;
 
     // sample prep has stopped due to errors
-    STATE_ERROR = 2;
+    ERROR = 3;
 
     // sample prep was cancelled via a call to cancel()
-    STATE_CANCELLED = 3;
+    CANCELLED = 4;
+}
+
+// SampleStats stores basic numbers from the
+// sample processing.
+message SampleStats {
+
+    // total reads across all FASTQs for a sample
+    int32 totalReads = 1;
+
+    // kept reads across all FASTQs for a sample
+    int32 keptReads = 2;
+
+    // ampliconCoverage counts the numer of reads assigned to each amplicon for a sample
+    map<string, int32> ampliconCoverage = 3;
+
+    // meanAmpliconSize is the mean size of the reference amplicons (incl. primers)
+    int32 meanAmpliconSize = 4;
+
+    // lengthMax is the maximum length allowed for a read to be kept.
+    int32 lengthMax = 5;
+
+    // minLength is the minimum length allowed for a read to be kept.
+    int32 lengthMin = 6;
 }
 
 // SampleInfo describes how a sample was
 // processed by Archer.
 message SampleInfo {
 
-    // id of the sample, as returned by start()
-    string id = 1;
+    // sampleID is the sample identifier - as returned by Process()
+    string sampleID = 1;
 
     // the original message used to start the sample processing
-    StartRequest startRequest = 2;
+    ProcessRequest processRequest = 2;
 
     // state the sample is in
     State state = 3;
@@ -68,24 +95,35 @@ message SampleInfo {
     // endTime for processing (unset if processing still running)
     google.protobuf.Timestamp endTime = 7;
 
+    // processStats contains details on the processing request output
+    SampleStats processStats = 8;
+
 }
 
-// StartRequest will request a sample to be processed by Archer.
-message StartRequest {
+// ProcessRequest will request a sample to be processed by Archer.
+message ProcessRequest {
 
     // api version
     string apiVersion = 1;
 
-    // input directories to search for reads process
-    repeated string inputReadsDirectories = 2;
+    // sampleID is the sample identifier - users job to assign this and make it unique
+    string sampleID = 2;
 
-    // endpoint for processed data
-    string endpoint = 3;
+    // inputFASTQfiles for this sample
+    repeated string inputFASTQfiles = 3;
 
+    // scheme denotes the amplicon scheme used for the sample
+    string scheme = 4;
+
+    // schemeVersion denotes the amplicon scheme version used
+    int32 schemeVersion  = 5;
+
+    // endpoint for processed data to be sent
+    string endpoint = 6;
 }
 
-// StartResponse
-message StartResponse {
+// ProcessResponse
+message ProcessResponse {
 
     // api version
     string apiVersion = 1;

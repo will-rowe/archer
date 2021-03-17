@@ -1,10 +1,11 @@
 all: proto docs fmt lint vet test build
 
 proto:
-		protoc -I.  --go_out=plugins=grpc:pkg api/proto/v1/archer.proto
+		protoc -I.  --go_out=plugins=grpc:pkg api/proto/v1/*.proto
 
 docs:
 		protoc -I. --doc_out=api/docs/v1 --doc_opt=markdown,archer.md api/proto/v1/archer.proto	
+		protoc -I. --doc_out=api/docs/v1 --doc_opt=markdown,schemes.md api/proto/v1/schemes.proto	
 
 fmt:
 		go list ./... | grep -v /api/ | go fmt

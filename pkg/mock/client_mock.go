@@ -56,24 +56,24 @@ func (mr *MockArcherClientMockRecorder) Cancel(arg0, arg1 interface{}, arg2 ...i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cancel", reflect.TypeOf((*MockArcherClient)(nil).Cancel), varargs...)
 }
 
-// Start mocks base method.
-func (m *MockArcherClient) Start(arg0 context.Context, arg1 *v1.StartRequest, arg2 ...grpc.CallOption) (*v1.StartResponse, error) {
+// Process mocks base method.
+func (m *MockArcherClient) Process(arg0 context.Context, arg1 *v1.ProcessRequest, arg2 ...grpc.CallOption) (*v1.ProcessResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "Start", varargs...)
-	ret0, _ := ret[0].(*v1.StartResponse)
+	ret := m.ctrl.Call(m, "Process", varargs...)
+	ret0, _ := ret[0].(*v1.ProcessResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Start indicates an expected call of Start.
-func (mr *MockArcherClientMockRecorder) Start(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+// Process indicates an expected call of Process.
+func (mr *MockArcherClientMockRecorder) Process(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockArcherClient)(nil).Start), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Process", reflect.TypeOf((*MockArcherClient)(nil).Process), varargs...)
 }
 
 // Watch mocks base method.
