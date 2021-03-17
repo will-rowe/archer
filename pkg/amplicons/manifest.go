@@ -10,7 +10,11 @@ import (
 )
 
 var (
-	ErrNoSchemeName    = errors.New("no primer scheme name provided")
+
+	// ErrNoSchemeName is returned when primer scheme name is not provided
+	ErrNoSchemeName = errors.New("no primer scheme name provided")
+
+	// ErrNoSchemeVersion is returned when a bad or non-existant scheme version is provided
 	ErrNoSchemeVersion = errors.New("request scheme version must be >= 0")
 )
 

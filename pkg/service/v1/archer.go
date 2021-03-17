@@ -229,11 +229,11 @@ func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 	// and update the request the appropriate scheme tag
 	// for this scheme
 	log.Trace("checking manifest")
-	if schemeTag, err := amplicons.CheckManifest(a.manifest, request.GetScheme(), request.GetSchemeVersion()); err != nil {
+	schemeTag, err := amplicons.CheckManifest(a.manifest, request.GetScheme(), request.GetSchemeVersion())
+	if err != nil {
 		return err
-	} else {
-		request.Scheme = schemeTag
 	}
+	request.Scheme = schemeTag
 
 	// check that the current session has the requested amplicon set stored, or download it now
 	log.Trace("checking primer scheme")

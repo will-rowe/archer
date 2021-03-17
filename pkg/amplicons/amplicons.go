@@ -20,9 +20,9 @@ import (
 )
 
 const (
-	KmerSize   = 7
-	SketchSize = 24
-	Canonical  = true
+	kmerSize   = 7
+	sketchSize = 24
+	canonical  = true
 )
 
 // Amplicon stores the minimal information needed
@@ -36,7 +36,8 @@ type Amplicon struct {
 	sketch   *minhash.MinHash // minhash sketch for the amplicon
 }
 
-// AmpliconSet
+// AmpliconSet is a collection amplicons
+// produced by a primer scheme.
 type AmpliconSet map[string]*Amplicon
 
 // GetMeanSize returns the mean amplicon size.
@@ -57,12 +58,12 @@ func (as AmpliconSet) GetMeanSize() int {
 func (as AmpliconSet) GetTopHit(read []byte) (string, float64, error) {
 
 	// sketch the query read
-	sketcher := minhash.New(KmerSize, SketchSize)
-	hasher, err := nthash.NewHasher(&read, KmerSize)
+	sketcher := minhash.New(kmerSize, sketchSize)
+	hasher, err := nthash.NewHasher(&read, kmerSize)
 	if err != nil {
 		return "", 0.0, err
 	}
-	sketcher.Add(hasher.Hash(Canonical))
+	sketcher.Add(hasher.Hash(canonical))
 
 	// compare the query against each amplicon
 	// TODO: this is inefficient and we could/should use an index
@@ -120,10 +121,10 @@ func NewAmpliconSet(manifest *api.Manifest, requestedScheme string, requestedVer
 func (a *Amplicon) getSketch() error {
 
 	// create a minhash sketcher
-	a.sketch = minhash.New(KmerSize, SketchSize)
+	a.sketch = minhash.New(kmerSize, sketchSize)
 
 	// create the ntHash iterator using a pointer to the sequence and a k-mer size
-	hasher, err := nthash.NewHasher(&a.sequence, KmerSize)
+	hasher, err := nthash.NewHasher(&a.sequence, kmerSize)
 
 	// check for errors (e.g. bad k-mer size choice)
 	if err != nil {
@@ -131,7 +132,7 @@ func (a *Amplicon) getSketch() error {
 	}
 
 	// attach the hasher to the sketcher and populate the sketch
-	a.sketch.Add(hasher.Hash(Canonical))
+	a.sketch.Add(hasher.Hash(canonical))
 
 	return nil
 }

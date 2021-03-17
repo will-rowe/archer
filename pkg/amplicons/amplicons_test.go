@@ -77,8 +77,8 @@ func TestGetSketch(t *testing.T) {
 		if err := amplicon.getSketch(); err != nil {
 			t.Fatal(err)
 		}
-		if len(amplicon.sketch.GetSketch()) != SketchSize {
-			t.Fatalf("sketch was not expected size: wanted %d, got %d", SketchSize, len(amplicon.sketch.GetSketch()))
+		if len(amplicon.sketch.GetSketch()) != sketchSize {
+			t.Fatalf("sketch was not expected size: wanted %d, got %d", sketchSize, len(amplicon.sketch.GetSketch()))
 		}
 	}
 }

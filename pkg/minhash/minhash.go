@@ -12,19 +12,24 @@ import (
 type MinHash struct {
 	kSize      int
 	sketchSize int
-	sketch     *MinHashSketch
+	sketch     *Sketch
 }
 
-// MinHashSketch is a max-heap of uint64s.
-type MinHashSketch []uint64
+// Sketch is a max-heap of uint64s.
+type Sketch []uint64
 
-func (mh MinHashSketch) Len() int           { return len(mh) }
-func (mh MinHashSketch) Less(i, j int) bool { return mh[i] > mh[j] }
-func (mh MinHashSketch) Swap(i, j int)      { mh[i], mh[j] = mh[j], mh[i] }
-func (mh *MinHashSketch) Push(x interface{}) {
+func (mh Sketch) Len() int           { return len(mh) }
+func (mh Sketch) Less(i, j int) bool { return mh[i] > mh[j] }
+func (mh Sketch) Swap(i, j int)      { mh[i], mh[j] = mh[j], mh[i] }
+
+// Push will add a uint64 to a Sketch.
+func (mh *Sketch) Push(x interface{}) {
 	*mh = append(*mh, x.(uint64))
 }
-func (mh *MinHashSketch) Pop() interface{} {
+
+// Pop will remove a uint64 from the first
+// position in the Sketch.
+func (mh *Sketch) Pop() interface{} {
 	old := *mh
 	n := len(old)
 	x := old[n-1]
@@ -40,7 +45,7 @@ func New(kSize, sketchSize int) *MinHash {
 	mh := &MinHash{
 		kSize:      kSize,
 		sketchSize: sketchSize,
-		sketch:     new(MinHashSketch),
+		sketch:     new(Sketch),
 	}
 
 	// init the heap, which we use as the sketch
