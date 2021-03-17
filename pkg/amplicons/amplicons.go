@@ -20,24 +20,66 @@ import (
 )
 
 const (
-	kmerSize   = 7
-	sketchSize = 24
-	canonical  = true
+	KmerSize   = 7
+	SketchSize = 24
+	Canonical  = true
 )
 
 // Amplicon stores the minimal information needed
 // by Archer to perform FASTQ filtering for
 // amplicon enrichment.
 type Amplicon struct {
-	refName  string   // reference sequence ID
-	start    int      // start of leftmost primer (0-based indexing)
-	end      int      // end of rightmost primer
-	sequence []byte   // reference sequence for amplicon (incl. primer sequences)
-	sketch   []uint64 // minhash sketch for the amplicon
+	refName  string           // reference sequence ID
+	start    int              // start of leftmost primer (0-based indexing)
+	end      int              // end of rightmost primer
+	sequence []byte           // reference sequence for amplicon (incl. primer sequences)
+	sketch   *minhash.MinHash // minhash sketch for the amplicon
 }
 
 // AmpliconSet
 type AmpliconSet map[string]*Amplicon
+
+// GetMeanSize returns the mean amplicon size.
+// Primers and inserts are included.
+func (as AmpliconSet) GetMeanSize() int {
+	meanSize := 0
+	for _, amplicon := range as {
+		meanSize += (amplicon.end - amplicon.start)
+	}
+	meanSize /= len(as)
+	return meanSize
+}
+
+// GetTopHit will compare a read against a each amplicon
+// in the set and return the name of the amplicon with
+// the best match, plus the Jaccard distance and any
+// error.
+func (as AmpliconSet) GetTopHit(read []byte) (string, float64, error) {
+
+	// sketch the query read
+	sketcher := minhash.New(KmerSize, SketchSize)
+	hasher, err := nthash.NewHasher(&read, KmerSize)
+	if err != nil {
+		return "", 0.0, err
+	}
+	sketcher.Add(hasher.Hash(Canonical))
+
+	// compare the query against each amplicon
+	// TODO: this is inefficient and we could/should use an index
+	topDist := 0.0
+	topHit := ""
+	for ampliconName, amplicon := range as {
+		dist, err := sketcher.GetDistance(amplicon.sketch)
+		if err != nil {
+			return "", 0.0, err
+		}
+		if dist > topDist {
+			topDist = dist
+			topHit = ampliconName
+		}
+	}
+	return topHit, topDist, nil
+}
 
 // NewAmpliconSet downloads the primer set and
 // reference sequence for a primer scheme in
@@ -78,10 +120,10 @@ func NewAmpliconSet(manifest *api.Manifest, requestedScheme string, requestedVer
 func (a *Amplicon) getSketch() error {
 
 	// create a minhash sketcher
-	sketcher := minhash.New(kmerSize, sketchSize)
+	a.sketch = minhash.New(KmerSize, SketchSize)
 
 	// create the ntHash iterator using a pointer to the sequence and a k-mer size
-	hasher, err := nthash.NewHasher(&a.sequence, kmerSize)
+	hasher, err := nthash.NewHasher(&a.sequence, KmerSize)
 
 	// check for errors (e.g. bad k-mer size choice)
 	if err != nil {
@@ -89,10 +131,8 @@ func (a *Amplicon) getSketch() error {
 	}
 
 	// attach the hasher to the sketcher and populate the sketch
-	sketcher.Add(hasher.Hash(canonical))
+	a.sketch.Add(hasher.Hash(Canonical))
 
-	// collect the sketch and add it to the amplicon
-	a.sketch = sketcher.GetSketch()
 	return nil
 }
 

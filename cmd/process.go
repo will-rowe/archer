@@ -55,7 +55,7 @@ func process() {
 
 	// connect to the gRPC server
 	addr := fmt.Sprintf("%s:%s", *grpcAddr, *grpcPort)
-	log.Printf("dialing %v...", addr)
+	log.Printf("dialing %v", addr)
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("could not connect to the Archer gRPC server: %v", err)

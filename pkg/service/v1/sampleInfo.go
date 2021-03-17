@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/golang/protobuf/ptypes"
 
@@ -43,7 +44,7 @@ func NewSample(options ...SampleOption) (*api.SampleInfo, error) {
 	s := &api.SampleInfo{
 		SampleID:        "",
 		ProcessRequest:  nil,
-		State:           api.State_STATE_RUNNING,
+		State:           api.State_UNKNOWN,
 		Errors:          []string{},
 		FilesDiscovered: 0,
 		StartTime:       ptypes.TimestampNow(),
@@ -58,4 +59,32 @@ func NewSample(options ...SampleOption) (*api.SampleInfo, error) {
 
 	// return the initialised struct
 	return s, nil
+}
+
+// GetAmpliconCoverage will check SampleStats and return
+// the number of covered amplicons, the total number of
+// amplicons and the mean coverage.
+func GetAmpliconCoverage(sampleStats *api.SampleStats) (int, int, float64) {
+	coveredAmplicons := 0
+	totalAmplicons := len(sampleStats.AmpliconCoverage)
+	meanCoverage := int32(0)
+	for _, cov := range sampleStats.AmpliconCoverage {
+		if cov != 0 {
+			coveredAmplicons++
+		}
+		meanCoverage += cov
+	}
+	return coveredAmplicons, totalAmplicons, float64(meanCoverage) / float64(totalAmplicons)
+}
+
+// checkError will check an error, add it to the sample
+// and update its state. True is returned if an error
+// was received, False if error was nil.
+func checkError(sample *api.SampleInfo, err error) bool {
+	if err == nil {
+		return false
+	}
+	sample.State = api.State_ERROR
+	sample.Errors = append(sample.Errors, fmt.Sprintf("%s", err))
+	return true
 }

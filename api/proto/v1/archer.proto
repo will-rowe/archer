@@ -31,17 +31,43 @@ service Archer {
 // State of a sample being handled by Archer.
 enum State {
 
+    // sample is queued
+    UNKNOWN = 0;
+
     // sample prep is running
-    STATE_RUNNING = 0;
+    RUNNING = 1;
 
     // sample prep is complete with no errors
-    STATE_SUCCESS = 1;
+    SUCCESS = 2;
 
     // sample prep has stopped due to errors
-    STATE_ERROR = 2;
+    ERROR = 3;
 
     // sample prep was cancelled via a call to cancel()
-    STATE_CANCELLED = 3;
+    CANCELLED = 4;
+}
+
+// SampleStats stores basic numbers from the
+// sample processing.
+message SampleStats {
+
+    // total reads across all FASTQs for a sample
+    int32 totalReads = 1;
+
+    // kept reads across all FASTQs for a sample
+    int32 keptReads = 2;
+
+    // ampliconCoverage counts the numer of reads assigned to each amplicon for a sample
+    map<string, int32> ampliconCoverage = 3;
+
+    // meanAmpliconSize is the mean size of the reference amplicons (incl. primers)
+    int32 meanAmpliconSize = 4;
+
+    // lengthMax is the maximum length allowed for a read to be kept.
+    int32 lengthMax = 5;
+
+    // minLength is the minimum length allowed for a read to be kept.
+    int32 lengthMin = 6;
 }
 
 // SampleInfo describes how a sample was
@@ -68,6 +94,9 @@ message SampleInfo {
 
     // endTime for processing (unset if processing still running)
     google.protobuf.Timestamp endTime = 7;
+
+    // processStats contains details on the processing request output
+    SampleStats processStats = 8;
 
 }
 

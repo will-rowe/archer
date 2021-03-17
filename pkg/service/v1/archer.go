@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/will-rowe/archer/pkg/amplicons"
 	api "github.com/will-rowe/archer/pkg/api/v1"
@@ -21,6 +22,12 @@ const useSync = true
 
 // apiVersion sets the API version to use
 const apiVersion = "1"
+
+// lengthThreshold is the percentage above/below the mean amplicon size to set max/min length read filtering to
+const lengthThreshold = 0.2
+
+// jaccardThreshold is the minimum jaccard distance to match a read to an amplicon
+const jaccardThreshold = 0.7
 
 // ArcherOption is a wrapper struct used to pass functional
 // options to the Archer constructor.
@@ -39,6 +46,9 @@ type Archer struct {
 	// version of API implemented by the server
 	version string
 
+	// numWorkers sets the number of process request workers to use
+	numWorkers int
+
 	// shutdown is a signal to gracefully shutdown long running service processes (e.g. watch)
 	shutdownChan chan struct{}
 
@@ -50,6 +60,25 @@ type Archer struct {
 
 	// ampliconCache is an in-memory cache of the schemes used for the current session
 	ampliconCache map[string]*amplicons.AmpliconSet
+
+	// processChan is used to send incoming process requests to the process workers
+	processChan chan *api.SampleInfo
+
+	// watcherChan sends updates to any connected watcher
+	watcherChan chan *api.SampleInfo
+}
+
+// SetNumWorkers is an option setter for the NewArcher
+// constructor that sets the number of concurrent
+// process request workers to use.
+func SetNumWorkers(numWorkers int) ArcherOption {
+	return func(x *Archer) error {
+		if (numWorkers < 1) || (numWorkers > 12) {
+			return errors.New("number of process request workers must be between 1 and 12")
+		}
+		x.numWorkers = numWorkers
+		return nil
+	}
 }
 
 // SetDb is an option setter for the NewArcher constructor
@@ -96,8 +125,11 @@ func NewArcher(options ...ArcherOption) (api.ArcherServer, func() error, error) 
 	// create the service
 	a := &Archer{
 		version:       apiVersion,
+		numWorkers:    2,
 		shutdownChan:  make(chan struct{}),
 		ampliconCache: make(map[string]*amplicons.AmpliconSet),
+		processChan:   make(chan *api.SampleInfo),
+		watcherChan:   nil,
 	}
 
 	// set options
@@ -110,6 +142,11 @@ func NewArcher(options ...ArcherOption) (api.ArcherServer, func() error, error) 
 	// TODO: check a db is functioning
 	if a.db == nil {
 		return nil, nil, errors.New("dbPath is required")
+	}
+
+	// start up the process request workers
+	for i := 0; i < a.numWorkers; i++ {
+		go a.processWorker()
 	}
 
 	// return the instance and it's shutdown method
@@ -129,14 +166,41 @@ func (a *Archer) checkAPI(requestedAPI string) error {
 // shutdown will stop the Archer service gracefully.
 func (a *Archer) shutdown() error {
 
+	// shut down the job chan to stop the process workers
+	close(a.processChan)
+
 	// signal to any watch func calls that it's time to stop
 	close(a.shutdownChan)
+	if a.watcherChan != nil {
+		close(a.watcherChan)
+	}
 
 	// sync and close the db
 	if err := a.db.Sync(); err != nil {
 		return err
 	}
 	if err := a.db.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// addSample will add or update a sample
+// in the Archer db.
+// NOTE: this will nuke existing db entries
+// and the user should check themselves
+func (a *Archer) addSample(sample *api.SampleInfo) error {
+
+	// lock the db for RW access
+	a.Lock()
+	defer a.Unlock()
+
+	// marshal the sample and write it the db
+	data, err := proto.Marshal(sample)
+	if err != nil {
+		return err
+	}
+	if err := a.db.Put([]byte(sample.GetSampleID()), data); err != nil {
 		return err
 	}
 	return nil
@@ -149,6 +213,9 @@ func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 
 	// check input files exist
 	log.Trace("checking input files")
+	if len(request.GetInputFASTQfiles()) == 0 {
+		return fmt.Errorf("no FASTQ files provided")
+	}
 	for _, f := range request.GetInputFASTQfiles() {
 		if _, err := os.Stat(f); err != nil {
 			if os.IsNotExist(err) {
@@ -169,16 +236,22 @@ func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 	}
 
 	// check that the current session has the requested amplicon set stored, or download it now
-	key := fmt.Sprintf("%v-%v", request.GetScheme(), request.GetSchemeVersion())
-	if _, ok := a.ampliconCache[key]; !ok {
+	log.Trace("checking primer scheme")
+	if _, ok := a.ampliconCache[generateAmpliconSetID(request.GetScheme(), request.GetSchemeVersion())]; !ok {
 		ampliconSet, err := amplicons.NewAmpliconSet(a.manifest, request.GetScheme(), request.GetSchemeVersion())
 		if err != nil {
 			return err
 		}
-		a.ampliconCache[key] = ampliconSet
+		a.ampliconCache[generateAmpliconSetID(request.GetScheme(), request.GetSchemeVersion())] = ampliconSet
 	}
 
 	// TODO: other checks (e.g. api endpoint)
 
 	return nil
+}
+
+// generateAmpliconSetID is a helper function
+// to generate a string id.
+func generateAmpliconSetID(scheme string, version int32) string {
+	return fmt.Sprintf("%v-%v", scheme, version)
 }

@@ -9,6 +9,8 @@
     - [ProcessRequest](#v1.ProcessRequest)
     - [ProcessResponse](#v1.ProcessResponse)
     - [SampleInfo](#v1.SampleInfo)
+    - [SampleStats](#v1.SampleStats)
+    - [SampleStats.AmpliconCoverageEntry](#v1.SampleStats.AmpliconCoverageEntry)
     - [WatchRequest](#v1.WatchRequest)
     - [WatchResponse](#v1.WatchResponse)
   
@@ -105,6 +107,44 @@ processed by Archer.
 | filesDiscovered | [int32](#int32) |  | filesDiscovered is the number of files found for this sample |
 | startTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | startTime for processing |
 | endTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | endTime for processing (unset if processing still running) |
+| processStats | [SampleStats](#v1.SampleStats) |  | processStats contains details on the processing request output |
+
+
+
+
+
+
+<a name="v1.SampleStats"></a>
+
+### SampleStats
+SampleStats stores basic numbers from the
+sample processing.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| totalReads | [int32](#int32) |  | total reads across all FASTQs for a sample |
+| keptReads | [int32](#int32) |  | kept reads across all FASTQs for a sample |
+| ampliconCoverage | [SampleStats.AmpliconCoverageEntry](#v1.SampleStats.AmpliconCoverageEntry) | repeated | ampliconCoverage counts the numer of reads assigned to each amplicon for a sample |
+| meanAmpliconSize | [int32](#int32) |  | meanAmpliconSize is the mean size of the reference amplicons (incl. primers) |
+| lengthMax | [int32](#int32) |  | lengthMax is the maximum length allowed for a read to be kept. |
+| lengthMin | [int32](#int32) |  | minLength is the minimum length allowed for a read to be kept. |
+
+
+
+
+
+
+<a name="v1.SampleStats.AmpliconCoverageEntry"></a>
+
+### SampleStats.AmpliconCoverageEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [int32](#int32) |  |  |
 
 
 
@@ -152,10 +192,11 @@ State of a sample being handled by Archer.
 
 | Name | Number | Description |
 | ---- | ------ | ----------- |
-| STATE_RUNNING | 0 | sample prep is running |
-| STATE_SUCCESS | 1 | sample prep is complete with no errors |
-| STATE_ERROR | 2 | sample prep has stopped due to errors |
-| STATE_CANCELLED | 3 | sample prep was cancelled via a call to cancel() |
+| UNKNOWN | 0 | sample is queued |
+| RUNNING | 1 | sample prep is running |
+| SUCCESS | 2 | sample prep is complete with no errors |
+| ERROR | 3 | sample prep has stopped due to errors |
+| CANCELLED | 4 | sample prep was cancelled via a call to cancel() |
 
 
  

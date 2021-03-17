@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 
 	api "github.com/will-rowe/archer/pkg/api/v1"
+	"github.com/will-rowe/archer/pkg/service/v1"
 )
 
 // watchCmd represents the watch command
@@ -33,7 +34,7 @@ func watcher() {
 
 	// connect to the gRPC server
 	addr := fmt.Sprintf("%s:%s", *grpcAddr, *grpcPort)
-	log.Printf("\tdialing %v...", addr)
+	log.Printf("dialing %v", addr)
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("could not connect to the Archer gRPC server: %v", err)
@@ -44,7 +45,7 @@ func watcher() {
 	client := api.NewArcherClient(conn)
 
 	// create a watch stream request
-	log.Println("\topening watch stream")
+	log.Println("opening watch stream")
 	req := &api.WatchRequest{ApiVersion: DefaultAPIVersion, SendFinished: true}
 	stream, err := client.Watch(context.Background(), req)
 	if err != nil {
@@ -53,6 +54,7 @@ func watcher() {
 
 	// set up control
 	done := make(chan bool)
+	log.Print("completed samples:")
 	go func() {
 		for {
 			resp, err := stream.Recv()
@@ -71,7 +73,8 @@ func watcher() {
 
 			// log stream
 			for _, sample := range resp.GetSamples() {
-				log.Printf("\tsample: %v", sample.GetSampleID())
+				covAmps, totAmps, meanCov := service.GetAmpliconCoverage(sample.GetProcessStats())
+				log.Printf("\t- %v\t(%d/%d reads kept, %d/%d amplicons covered (mean coverage = %.0f))", sample.GetSampleID(), sample.GetProcessStats().GetKeptReads(), sample.GetProcessStats().GetTotalReads(), covAmps, totAmps, meanCov)
 			}
 		}
 	}()

@@ -9,6 +9,7 @@ var (
 	primersURL        = "https://github.com/artic-network/primer-schemes/raw/master/nCoV-2019/V3/nCoV-2019.primer.bed"
 	refURL            = "https://github.com/artic-network/primer-schemes/raw/master/nCoV-2019/V3/nCoV-2019.reference.fasta"
 	numSCOV2amplicons = 98
+	queryRead         = []byte("CAAACCAACCAACTTTCGATCTCTTGTAGATCTGTTCTCTAAACGAACTTTAAAATCTGTGTGGCTGTCACTCGGCTGCATGCTTAGTGCACTCACGCAGTATAATTAATAACTAATTACTGTCGTTGACAGGACACGAGTAACTCGTCTATCTTCTGCAGGCTGCTTACGGTTTCGTCCGTGTTGCAGCCGATCATCAGCACATCTAGGTTTCGTCCGGGTGTGACCGAAAGGTAAGATGGAGAGCCTTGTCCCTGGTTTCAACGAGAAAACACACGTCCAACTCAGTTTGCCTGTTTTACAGGTTCGCGACGTGCTCGTACGTGGCTTTGGAGACTCCGTGGAGGAGGTCTTATCAGAGGCACGTCAACATCTTAAAGATGGCACTTGTGGCTTAGTAGAAGTTGAAAAAGGCGTTTTGCCTCAACTTGAACAGCCCTATGTGTTCAT")
 )
 
 // TestGetManifest
@@ -42,6 +43,9 @@ func TestGetPrimers(t *testing.T) {
 	if len(a) != numSCOV2amplicons {
 		t.Fatalf("incorrect number of amplicons generated from SARS-COV-2 (v3) scheme: wanted 98, got %d", len(a))
 	}
+	if a.GetMeanSize() != 393 {
+		t.Fatalf("did not get correct mean amplicon size: wanted 393, got %d", a.GetMeanSize())
+	}
 }
 
 // TestGetSequence
@@ -73,8 +77,31 @@ func TestGetSketch(t *testing.T) {
 		if err := amplicon.getSketch(); err != nil {
 			t.Fatal(err)
 		}
-		if len(amplicon.sketch) != sketchSize {
-			t.Fatalf("sketch was not expected size: wanted %d, got %d", sketchSize, len(amplicon.sketch))
+		if len(amplicon.sketch.GetSketch()) != SketchSize {
+			t.Fatalf("sketch was not expected size: wanted %d, got %d", SketchSize, len(amplicon.sketch.GetSketch()))
 		}
+	}
+}
+
+// TestGetTopHit
+func TestGetTopHit(t *testing.T) {
+	a := make(AmpliconSet)
+	if err := getPrimers(a, primersURL); err != nil {
+		t.Fatal(err)
+	}
+	if err := getSequence(a, refURL); err != nil {
+		t.Fatal(err)
+	}
+	for _, amplicon := range a {
+		if err := amplicon.getSketch(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	topHit, _, err := a.GetTopHit(queryRead)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if topHit != "1" {
+		t.Logf("incorrect amplicon return for top hit: wanted 1, got %s", topHit)
 	}
 }

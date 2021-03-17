@@ -3,6 +3,7 @@ package minhash
 
 import (
 	"container/heap"
+	"fmt"
 	"sort"
 )
 
@@ -62,8 +63,8 @@ func (mh *MinHash) Add(kmerChan <-chan uint64) {
 		if (*mh.sketch)[0] > kmer {
 
 			// replace largest sketch value with a new min
-			_ = heap.Pop(mh.sketch)
-			heap.Push(mh.sketch, kmer)
+			(*mh.sketch)[0] = kmer
+			heap.Fix(mh.sketch, 0)
 		}
 	}
 }
@@ -77,4 +78,31 @@ func (mh *MinHash) GetSketch() []uint64 {
 	}
 	sort.Slice(sketch, func(i, j int) bool { return sketch[i] < sketch[j] })
 	return sketch
+}
+
+// GetDistance returns the jaccard distance
+// between two sketches.
+func (mh *MinHash) GetDistance(query *MinHash) (float64, error) {
+	if mh.kSize != query.kSize {
+		return 0.0, fmt.Errorf("kmer sizes do not match: got %d and %d", mh.kSize, query.kSize)
+	}
+	if mh.sketchSize != query.sketchSize {
+		return 0.0, fmt.Errorf("sketch sizes do not match: got %d and %d", mh.sketchSize, query.sketchSize)
+	}
+	minimums := make(map[uint64]float64, len(*mh.sketch))
+	for _, val := range *mh.sketch {
+		minimums[val]++
+	}
+	intersect := 0.0
+	for _, val := range *query.sketch {
+		if count, ok := minimums[val]; ok && count > 0 {
+			intersect++
+			minimums[val] = count - 1
+		}
+	}
+	maxLen := len(*mh.sketch)
+	if maxLen < len(*query.sketch) {
+		maxLen = len(*query.sketch)
+	}
+	return intersect / float64(maxLen), nil
 }

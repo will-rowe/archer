@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"runtime"
 
 	"github.com/spf13/cobra"
 
@@ -13,8 +14,10 @@ import (
 
 // command line options
 var (
-	dbPath      *string // dbPath sets the location and filename for the Archer database
-	manifestURL *string // manifestURL tells archer where to collect the ARTIC primer scheme manifest
+	dbPath        *string // dbPath sets the location and filename for the Archer database
+	manifestURL   *string // manifestURL tells archer where to collect the ARTIC primer scheme manifest
+	numWorkers    *int    // number of concurrent request handlers to use
+	numProcessors *int    // number of processors to use
 )
 
 // launchCmd represents the launch command
@@ -32,17 +35,20 @@ func init() {
 	grpcPort = launchCmd.Flags().String("grpcPort", DefaultgRPCport, "TCP port to listen to by the gRPC server")
 	dbPath = launchCmd.Flags().String("dbPath", DefaultDbPath, "location to store the Archer database")
 	manifestURL = launchCmd.Flags().String("manifestURL", DefaultManifestURL, "the ARTIC primer scheme manifest url")
+	numWorkers = launchCmd.Flags().Int("numWorkers", 2, "number of concurrent request handlers to use")
+	numProcessors = launchCmd.Flags().IntP("numProcessors", "p", -1, "number of processors to use (-1 == all)")
 	rootCmd.AddCommand(launchCmd)
 }
 
 // launchArcher sets up and runs the gRPC Archer service
 func launchArcher() {
+	runtime.GOMAXPROCS(*numProcessors)
 
 	// get top level context
 	ctx := context.Background()
 
 	// get the service API
-	serverAPI, cleanupAPI, err := service.NewArcher(service.SetDb(*dbPath), service.SetManifest(*manifestURL))
+	serverAPI, cleanupAPI, err := service.NewArcher(service.SetNumWorkers(*numWorkers), service.SetDb(*dbPath), service.SetManifest(*manifestURL))
 	if err != nil {
 		log.Fatalf("could not create Archer service: %v", err)
 	}
