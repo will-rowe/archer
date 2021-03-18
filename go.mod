@@ -6,6 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.29.24
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.4.3
+	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/grailbio/bio v0.0.0-20200818183458-d966d878d120
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
