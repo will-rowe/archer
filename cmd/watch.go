@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
@@ -44,16 +47,24 @@ func watcher() {
 	// establish the client
 	client := api.NewArcherClient(conn)
 
+	// prepare a graceful shutdown
+	log.Println("preparing signal notifier")
+	cSignalChan := make(chan os.Signal, 1)
+	signal.Notify(cSignalChan, syscall.SIGINT, syscall.SIGTERM)
+	sSignalChan := make(chan bool)
+	errorChan := make(chan error)
+
 	// create a watch stream request
 	log.Println("opening watch stream")
 	req := &api.WatchRequest{ApiVersion: DefaultAPIVersion, SendFinished: true}
-	stream, err := client.Watch(context.Background(), req)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stream, err := client.Watch(ctx, req)
 	if err != nil {
 		log.Fatalf("could not open watch stream: %v", err)
 	}
 
-	// set up control
-	done := make(chan bool)
+	// wait for samples to be sent
 	log.Print("completed samples:")
 	go func() {
 		for {
@@ -61,25 +72,39 @@ func watcher() {
 
 			// detect end of stream
 			if err == io.EOF {
-				log.Println("service finished, stopping watcher")
-				done <- true
+				sSignalChan <- true
 				return
 			}
 
 			// catch errors
 			if err != nil {
-				log.Fatalf("error receiving message: %v", err)
+				errorChan <- fmt.Errorf("error receiving message: %v", err)
 			}
 
 			// log stream
 			for _, sample := range resp.GetSamples() {
 				covAmps, totAmps, meanCov := service.GetAmpliconCoverage(sample.GetProcessStats())
-				log.Printf("\t- %v\t(%d/%d reads kept, %d/%d amplicons covered (mean coverage = %.0f))", sample.GetSampleID(), sample.GetProcessStats().GetKeptReads(), sample.GetProcessStats().GetTotalReads(), covAmps, totAmps, meanCov)
+				log.Printf("\t- %v\t(%d/%d reads kept, %d/%d amplicons covered (mean coverage = %.0f))\t%v\tprocessed in %d seconds", sample.GetSampleID(), sample.GetProcessStats().GetKeptReads(), sample.GetProcessStats().GetTotalReads(), covAmps, totAmps, meanCov, sample.GetEndpoint(), (sample.GetEndTime().Seconds - sample.GetStartTime().GetSeconds()))
 			}
 		}
 	}()
 
-	// block until stream is finished
-	<-done
+	// block until stream is finished or user input
+	select {
+	case <-sSignalChan:
+		log.Print("server shut down signal received")
+		break
+	case <-cSignalChan:
+		log.Print("client shut down signal received")
+		break
+	case <-ctx.Done():
+		log.Print("context finished")
+		break
+	case <-errorChan:
+		log.Fatal(err)
+	}
+	if err := stream.CloseSend(); err != nil {
+		log.Fatal(err)
+	}
 	log.Printf("finished")
 }

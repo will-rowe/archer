@@ -98,17 +98,19 @@ func Launch(ctx context.Context, serverAPI api.ArcherServer, cleanupAPI func() e
 		break
 	case <-ctx.Done():
 		break
-	case <-errorChan:
+	case err := <-errorChan:
 		log.Error(err)
 	}
 
 	// stop the server and clean up the service
 	log.Trace("stopping gRPC server")
 	server.GracefulStop()
+
 	log.Trace("cleaning up service")
 	if err := cleanupAPI(); err != nil {
 		return err
 	}
+
 	log.Trace("finished")
 	return nil
 }

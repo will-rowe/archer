@@ -20,6 +20,7 @@ var (
 	DefaultgRPCport      = "9090"
 	DefaultDbPath        = fmt.Sprintf("%v/.archer", getHome())
 	DefaultManifestURL   = "https://raw.githubusercontent.com/artic-network/primer-schemes/master/schemes_manifest.json"
+	DefaultBucketName    = "artic-archer-uploads-test"
 )
 
 // command line arguments shared by two or more subcommands

@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/will-rowe/archer/pkg/bucket"
 	"github.com/will-rowe/archer/pkg/protocol/grpc"
 	"github.com/will-rowe/archer/pkg/service/v1"
 )
@@ -18,6 +19,8 @@ var (
 	manifestURL   *string // manifestURL tells archer where to collect the ARTIC primer scheme manifest
 	numWorkers    *int    // number of concurrent request handlers to use
 	numProcessors *int    // number of processors to use
+	awsBucketName *string // the AWS S3 bucket name for uploading data to
+	awsRegion     *string // the AWS region to use
 )
 
 // launchCmd represents the launch command
@@ -37,6 +40,8 @@ func init() {
 	manifestURL = launchCmd.Flags().String("manifestURL", DefaultManifestURL, "the ARTIC primer scheme manifest url")
 	numWorkers = launchCmd.Flags().Int("numWorkers", 2, "number of concurrent request handlers to use")
 	numProcessors = launchCmd.Flags().IntP("numProcessors", "p", -1, "number of processors to use (-1 == all)")
+	awsBucketName = launchCmd.Flags().String("awsBucketName", DefaultBucketName, "the AWS S3 bucket name for data upload")
+	awsRegion = launchCmd.Flags().String("awsRegion", bucket.DefaultRegion, "the AWS region to use")
 	rootCmd.AddCommand(launchCmd)
 }
 
@@ -48,7 +53,7 @@ func launchArcher() {
 	ctx := context.Background()
 
 	// get the service API
-	serverAPI, cleanupAPI, err := service.NewArcher(service.SetNumWorkers(*numWorkers), service.SetDb(*dbPath), service.SetManifest(*manifestURL))
+	serverAPI, cleanupAPI, err := service.NewArcher(service.SetNumWorkers(*numWorkers), service.SetDb(*dbPath), service.SetManifest(*manifestURL), service.SetBucket(*awsBucketName, *awsRegion))
 	if err != nil {
 		log.Fatalf("could not create Archer service: %v", err)
 	}

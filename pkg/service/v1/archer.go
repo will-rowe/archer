@@ -15,6 +15,7 @@ import (
 
 	"github.com/will-rowe/archer/pkg/amplicons"
 	api "github.com/will-rowe/archer/pkg/api/v1"
+	"github.com/will-rowe/archer/pkg/bucket"
 )
 
 // useSync will run sync on every bit cask transaction, improving stability at the expense of time
@@ -49,11 +50,11 @@ type Archer struct {
 	// numWorkers sets the number of process request workers to use
 	numWorkers int
 
-	// shutdown is a signal to gracefully shutdown long running service processes (e.g. watch)
-	shutdownChan chan struct{}
-
 	// db is a key-value store for recording sample info
 	db *bitcask.Bitcask
+
+	// bucket contains the S3 info for managing uploads
+	bucket *bucket.Bucket
 
 	// manifest is the ARTIC primer scheme manifest
 	manifest *api.Manifest
@@ -87,14 +88,30 @@ func SetNumWorkers(numWorkers int) ArcherOption {
 func SetDb(dbPath string) ArcherOption {
 	return func(x *Archer) error {
 
-		// open/create the db
+		// open/create the db and attach it
 		db, err := bitcask.Open(dbPath, bitcask.WithSync(useSync))
 		if err != nil {
 			return err
 		}
-
-		// attach it to the Archer instance
 		x.db = db
+		return nil
+	}
+}
+
+// SetBucket is an option setter for the NewArcher constructor
+// that sets the S3 bucket field of the Archer struct.
+func SetBucket(name, region string) ArcherOption {
+	return func(x *Archer) error {
+
+		// create the bucket holder, check it and attach it
+		b, err := bucket.New(bucket.SetName(name), bucket.SetRegion(region))
+		if err != nil {
+			return err
+		}
+		if err := b.Check(); err != nil {
+			return err
+		}
+		x.bucket = b
 		return nil
 	}
 }
@@ -105,13 +122,11 @@ func SetDb(dbPath string) ArcherOption {
 func SetManifest(manifestURL string) ArcherOption {
 	return func(x *Archer) error {
 
-		// download the manifest and unpack
+		// download the manifest, unpack and attach it
 		manifest, err := amplicons.GetManifest(manifestURL)
 		if err != nil {
 			return err
 		}
-
-		// attach it to the Archer instance
 		x.manifest = manifest
 		return nil
 	}
@@ -126,7 +141,6 @@ func NewArcher(options ...ArcherOption) (api.ArcherServer, func() error, error) 
 	a := &Archer{
 		version:       apiVersion,
 		numWorkers:    2,
-		shutdownChan:  make(chan struct{}),
 		ampliconCache: make(map[string]*amplicons.AmpliconSet),
 		processChan:   make(chan *api.SampleInfo),
 		watcherChan:   nil,
@@ -169,12 +183,10 @@ func (a *Archer) shutdown() error {
 	// shut down the job chan to stop the process workers
 	close(a.processChan)
 
-	// signal to any watch func calls that it's time to stop
-	close(a.shutdownChan)
+	// shut down watcher channel if one exists
 	if a.watcherChan != nil {
 		close(a.watcherChan)
 	}
-
 	// sync and close the db
 	if err := a.db.Sync(); err != nil {
 		return err

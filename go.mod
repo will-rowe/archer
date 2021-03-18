@@ -3,6 +3,7 @@ module github.com/will-rowe/archer
 go 1.16
 
 require (
+	github.com/aws/aws-sdk-go v1.29.24 // indirect
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.4.3
 	github.com/grailbio/base v0.0.10-0.20200817015340-8e5f8ec2e457 // indirect
