@@ -36,7 +36,7 @@ func (a *Archer) Watch(request *api.WatchRequest, stream api.Archer_WatchServer)
 			}
 		}
 		if err := stream.Send(response); err != nil {
-			log.Printf("watch request failed to return a message: %v", err)
+			log.Errorf("watch request failed to return a message: %v", err)
 			return err
 		}
 	}
@@ -45,6 +45,7 @@ func (a *Archer) Watch(request *api.WatchRequest, stream api.Archer_WatchServer)
 	errChan := make(chan error)
 	go func() {
 		for sample := range a.watcherChan {
+			log.Tracef("watcher received finished sample - %s", sample.GetSampleID())
 			resp := &api.WatchResponse{ApiVersion: a.version, Samples: []*api.SampleInfo{sample}}
 			if err := stream.Send(resp); err != nil {
 				errChan <- err
@@ -58,6 +59,7 @@ func (a *Archer) Watch(request *api.WatchRequest, stream api.Archer_WatchServer)
 		case err := <-errChan:
 			return err
 		case <-stream.Context().Done():
+			log.Tracef("closing watcher stream")
 			close(errChan)
 			return nil
 		}

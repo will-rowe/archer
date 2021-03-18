@@ -14,8 +14,8 @@ import (
 
 const (
 
-	// AccessKeyId is the env variable to check for the AWS access key id
-	AccessKeyId = "AWS_ACCESS_KEY_ID"
+	// AccessKeyID is the env variable to check for the AWS access key id
+	AccessKeyID = "AWS_ACCESS_KEY_ID"
 
 	// AccessSecretKey is the env variable to check for the AWS secret key
 	AccessSecretKey = "AWS_SECRET_ACCESS_KEY"
@@ -25,10 +25,10 @@ const (
 )
 
 var (
-	ErrBucketName      = errors.New("bucket name is required")
-	ErrBucketRegion    = errors.New("bucket region required")
-	ErrAccessKeyID     = errors.New("no AWS_ACCESS_KEY_ID environment variable found")
-	ErrAccessSecretKey = errors.New("no AWS_SECRET_ACCESS_KEY environment variable found")
+	errBucketName      = errors.New("bucket name is required")
+	errBucketRegion    = errors.New("bucket region required")
+	errAccessKeyID     = errors.New("no AWS_ACCESS_KEY_ID environment variable found")
+	errAccessSecretKey = errors.New("no AWS_SECRET_ACCESS_KEY environment variable found")
 )
 
 // Bucket is used to pass AWS and S3
@@ -42,20 +42,20 @@ var (
 type Bucket struct {
 	name            string
 	region          string
-	accessKeyId     string
+	accessKeyID     string
 	accessSecretKey string
 }
 
-// BucketOption is a wrapper struct used to pass functional
+// Option is a wrapper struct used to pass functional
 // options to the Bucket constructor.
-type BucketOption func(bucket *Bucket) error
+type Option func(bucket *Bucket) error
 
 // SetName is an option setter for the New bucket constructor
 // that sets the name field of a Bucket struct.
-func SetName(name string) BucketOption {
+func SetName(name string) Option {
 	return func(x *Bucket) error {
 		if len(name) == 0 {
-			return ErrBucketName
+			return errBucketName
 		}
 		x.name = name
 		return nil
@@ -64,10 +64,10 @@ func SetName(name string) BucketOption {
 
 // SetRegion is an option setter for the New bucket constructor
 // that sets the region field of a Bucket struct.
-func SetRegion(region string) BucketOption {
+func SetRegion(region string) Option {
 	return func(x *Bucket) error {
 		if len(region) == 0 {
-			return ErrBucketRegion
+			return errBucketRegion
 		}
 		x.region = region
 		return nil
@@ -76,7 +76,7 @@ func SetRegion(region string) BucketOption {
 
 // New will construct a new bucket
 // info struct.
-func New(opts ...BucketOption) (*Bucket, error) {
+func New(opts ...Option) (*Bucket, error) {
 	b := &Bucket{
 		region: DefaultRegion,
 	}
@@ -94,20 +94,20 @@ func (b *Bucket) Check() error {
 
 	// check for required info
 	if len(b.name) == 0 {
-		return ErrBucketName
+		return errBucketName
 	}
 	if len(b.region) == 0 {
-		return ErrBucketRegion
+		return errBucketRegion
 	}
 
 	// get env variables
-	b.accessKeyId = os.Getenv(AccessKeyId)
+	b.accessKeyID = os.Getenv(AccessKeyID)
 	b.accessSecretKey = os.Getenv(AccessSecretKey)
-	if len(b.accessKeyId) == 0 {
-		return ErrAccessKeyID
+	if len(b.accessKeyID) == 0 {
+		return errAccessKeyID
 	}
 	if len(b.accessSecretKey) == 0 {
-		return ErrAccessSecretKey
+		return errAccessSecretKey
 	}
 	return nil
 }
