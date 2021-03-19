@@ -9,10 +9,10 @@ import (
 // Watch will respond to WatchRequests by streaming completed samples
 // back to the user as they are marked done by Archer.
 func (a *Archer) Watch(request *api.WatchRequest, stream api.Archer_WatchServer) error {
-	log.Trace("watch request received...")
+	log.Info("watch request received")
 
 	// set up a chan for the watcher to receive updates on
-	if a.watcherChan != nil {
+	if a.watcherChan == nil {
 		a.watcherChan = make(chan *api.SampleInfo)
 	}
 
@@ -45,7 +45,7 @@ func (a *Archer) Watch(request *api.WatchRequest, stream api.Archer_WatchServer)
 	errChan := make(chan error)
 	go func() {
 		for sample := range a.watcherChan {
-			log.Tracef("watcher received finished sample - %s", sample.GetSampleID())
+			log.Infof("watcher received finished sample - %s", sample.GetSampleID())
 			resp := &api.WatchResponse{ApiVersion: a.version, Samples: []*api.SampleInfo{sample}}
 			if err := stream.Send(resp); err != nil {
 				errChan <- err
@@ -59,7 +59,7 @@ func (a *Archer) Watch(request *api.WatchRequest, stream api.Archer_WatchServer)
 		case err := <-errChan:
 			return err
 		case <-stream.Context().Done():
-			log.Tracef("closing watcher stream")
+			log.Info("closing watcher stream")
 			close(errChan)
 			return nil
 		}

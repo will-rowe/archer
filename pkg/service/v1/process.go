@@ -18,7 +18,7 @@ import (
 
 // Process will begin processing for a sample.
 func (a *Archer) Process(ctx context.Context, request *api.ProcessRequest) (*api.ProcessResponse, error) {
-	log.Trace("process request received...")
+	log.Infof("process request received for %v", request.GetSampleID())
 
 	// check we have received a supported API request
 	if err := a.checkAPI(request.GetApiVersion()); err != nil {
@@ -57,6 +57,7 @@ func (a *Archer) Process(ctx context.Context, request *api.ProcessRequest) (*api
 	}
 
 	// add the sample to the processing queue
+	log.Infof("process response sent and sample added to queue for %v", request.GetSampleID())
 	a.processChan <- sampleInfo
 
 	// create a response and return
@@ -73,6 +74,7 @@ func (a *Archer) processWorker() {
 
 	// collect requests
 	for sample := range a.processChan {
+		log.Infof("worker started for %v", sample.GetSampleID())
 
 		// make a copy of the amplicon set for this request
 		as := a.ampliconCache[generateAmpliconSetID(sample.GetProcessRequest().GetScheme(), sample.GetProcessRequest().GetSchemeVersion())]
@@ -145,7 +147,7 @@ func (a *Archer) processWorker() {
 		}()
 
 		// start the uploader
-		endpoint, err := a.bucket.Upload(reader, sample.GetSampleID())
+		endpoint, err := a.bucket.Upload(reader, fmt.Sprintf("%s.fastq.gz", sample.GetSampleID()))
 		if err != nil {
 			panic(err)
 		}
@@ -155,7 +157,9 @@ func (a *Archer) processWorker() {
 		// (TODO: decide if upload continues if errors found)
 
 		// update status
-		sample.State = api.State_SUCCESS
+		if len(sample.GetErrors()) == 0 {
+			sample.State = api.State_SUCCESS
+		}
 		sample.EndTime = ptypes.TimestampNow()
 
 		// write back to db
@@ -167,5 +171,6 @@ func (a *Archer) processWorker() {
 		if a.watcherChan != nil {
 			a.watcherChan <- sample
 		}
+		log.Infof("worker finished for %v", sample.GetSampleID())
 	}
 }

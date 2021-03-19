@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/prologic/bitcask"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -224,7 +223,6 @@ func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 	// TODO: use type switch to validate more than just Process requests
 
 	// check input files exist
-	log.Trace("checking input files")
 	if len(request.GetInputFASTQfiles()) == 0 {
 		return fmt.Errorf("no FASTQ files provided")
 	}
@@ -240,7 +238,6 @@ func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 	// check requested scheme is in the ARTIC manifest
 	// and update the request the appropriate scheme tag
 	// for this scheme
-	log.Trace("checking manifest")
 	schemeTag, err := amplicons.CheckManifest(a.manifest, request.GetScheme(), request.GetSchemeVersion())
 	if err != nil {
 		return err
@@ -248,7 +245,6 @@ func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 	request.Scheme = schemeTag
 
 	// check that the current session has the requested amplicon set stored, or download it now
-	log.Trace("checking primer scheme")
 	if _, ok := a.ampliconCache[generateAmpliconSetID(request.GetScheme(), request.GetSchemeVersion())]; !ok {
 		ampliconSet, err := amplicons.NewAmpliconSet(a.manifest, request.GetScheme(), request.GetSchemeVersion())
 		if err != nil {
