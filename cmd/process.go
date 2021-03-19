@@ -22,7 +22,26 @@ var processCmd = &cobra.Command{
 	
 	The processing request is collecting via STDIN and should be
 	in JSON. The request will be validated prior to submitting it
-	to the Archer service.`,
+	to the Archer service, so check the response.
+	
+	Example usage:
+
+	cat sample.json | archer process
+
+	Where sample.json contains:
+
+	{
+		"apiVersion": "1",
+		"sampleID": "cvr1",
+		"inputFASTQfiles": ["/path/to/sample.fastq"],
+		"scheme": "scov2",
+		"schemeVersion": 3
+	}
+
+	For scheme and schemeVersion, these must be available in the
+	manifest provided to the server (archer launch --manifestURL ...).
+	By default, the server uses the ARTIC primer scheme manifest.
+	`,
 	Run: func(cmd *cobra.Command, args []string) {
 		process()
 	},

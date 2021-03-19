@@ -1,10 +1,13 @@
 package service
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"os"
 
+	"github.com/golang/protobuf/ptypes"
 	"github.com/grailbio/bio/encoding/fastq"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -15,7 +18,7 @@ import (
 
 // Process will begin processing for a sample.
 func (a *Archer) Process(ctx context.Context, request *api.ProcessRequest) (*api.ProcessResponse, error) {
-	log.Trace("process request received...")
+	log.Infof("process request received for %v", request.GetSampleID())
 
 	// check we have received a supported API request
 	if err := a.checkAPI(request.GetApiVersion()); err != nil {
@@ -54,6 +57,7 @@ func (a *Archer) Process(ctx context.Context, request *api.ProcessRequest) (*api
 	}
 
 	// add the sample to the processing queue
+	log.Infof("process response sent and sample added to queue for %v", request.GetSampleID())
 	a.processChan <- sampleInfo
 
 	// create a response and return
@@ -70,6 +74,7 @@ func (a *Archer) processWorker() {
 
 	// collect requests
 	for sample := range a.processChan {
+		log.Infof("worker started for %v", sample.GetSampleID())
 
 		// make a copy of the amplicon set for this request
 		as := a.ampliconCache[generateAmpliconSetID(sample.GetProcessRequest().GetScheme(), sample.GetProcessRequest().GetSchemeVersion())]
@@ -89,44 +94,73 @@ func (a *Archer) processWorker() {
 		sample.ProcessStats.LengthMax = sample.ProcessStats.MeanAmpliconSize + lengthRange
 		sample.ProcessStats.LengthMin = sample.ProcessStats.MeanAmpliconSize - lengthRange
 
-		// open each FASTQ file for the sample
-		for _, file := range sample.GetProcessRequest().GetInputFASTQfiles() {
-			fh, err := os.Open(file)
-			if checkError(sample, err) {
-				continue
+		// open a gz writer for the output reads and a reader for AWS upload
+		reader, writer := io.Pipe()
+		readChan := make(chan fastq.Read)
+		go func() {
+			gw := gzip.NewWriter(writer)
+			fw := fastq.NewWriter(gw)
+			for read := range readChan {
+				fw.Write(&read)
 			}
-			defer fh.Close()
-			faScanner := fastq.NewScanner(fh, fastq.All)
+			gw.Close()
+			writer.Close()
+		}()
 
-			// filter reads against amplicons
-			for faScanner.Scan(&read) {
-				sample.ProcessStats.TotalReads++
-
-				// length filter
-				if len(read.Seq) < int(sample.ProcessStats.GetLengthMin()) || len(read.Seq) > int(sample.ProcessStats.GetLengthMax()) {
-					continue
-				}
-
-				// filter against amplicons
-				topHit, score, err := as.GetTopHit([]byte(read.Seq))
+		// open each FASTQ file for the sample
+		go func() {
+			for _, file := range sample.GetProcessRequest().GetInputFASTQfiles() {
+				fh, err := os.Open(file)
 				if checkError(sample, err) {
 					continue
 				}
-				if score < jaccardThreshold {
-					continue
+				defer fh.Close()
+				faScanner := fastq.NewScanner(fh, fastq.All)
+
+				// filter reads against amplicons
+				for faScanner.Scan(&read) {
+					sample.ProcessStats.TotalReads++
+
+					// length filter
+					if len(read.Seq) < int(sample.ProcessStats.GetLengthMin()) || len(read.Seq) > int(sample.ProcessStats.GetLengthMax()) {
+						continue
+					}
+
+					// filter against amplicons
+					topHit, score, err := as.GetTopHit([]byte(read.Seq))
+					if checkError(sample, err) {
+						continue
+					}
+					if score < jaccardThreshold {
+						continue
+					}
+					sample.ProcessStats.AmpliconCoverage[topHit]++
+
+					// keep the read and send it to the uploader
+					sample.ProcessStats.KeptReads++
+					readChan <- read
 				}
-				sample.ProcessStats.AmpliconCoverage[topHit]++
-
-				// keep read, write to archive for upload
-				sample.ProcessStats.KeptReads++
 			}
-		}
 
-		// check for errors during fastq filtering
-		// upload (TODO: decide if upload continues if errors found)
+			// signal end the AWS upload
+			close(readChan)
+		}()
+
+		// start the uploader
+		endpoint, err := a.bucket.Upload(reader, fmt.Sprintf("%s.fastq.gz", sample.GetSampleID()))
+		if err != nil {
+			panic(err)
+		}
+		sample.Endpoint = endpoint
+
+		// TODO: handle any errors
+		// (TODO: decide if upload continues if errors found)
 
 		// update status
-		sample.State = api.State_SUCCESS
+		if len(sample.GetErrors()) == 0 {
+			sample.State = api.State_SUCCESS
+		}
+		sample.EndTime = ptypes.TimestampNow()
 
 		// write back to db
 		if err := a.addSample(sample); err != nil {
@@ -137,5 +171,6 @@ func (a *Archer) processWorker() {
 		if a.watcherChan != nil {
 			a.watcherChan <- sample
 		}
+		log.Infof("worker finished for %v", sample.GetSampleID())
 	}
 }

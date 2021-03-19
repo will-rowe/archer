@@ -98,6 +98,9 @@ message SampleInfo {
     // processStats contains details on the processing request output
     SampleStats processStats = 8;
 
+    // endpoint is the AWS S3 location for the processed sample
+    string endpoint = 9;
+
 }
 
 // ProcessRequest will request a sample to be processed by Archer.
@@ -117,9 +120,6 @@ message ProcessRequest {
 
     // schemeVersion denotes the amplicon scheme version used
     int32 schemeVersion  = 5;
-
-    // endpoint for processed data to be sent
-    string endpoint = 6;
 }
 
 // ProcessResponse

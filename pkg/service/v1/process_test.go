@@ -21,7 +21,7 @@ func TestArcher_Process(t *testing.T) {
 	mockClient := mock.NewMockArcherClient(ctrl)
 
 	// create a request
-	req := &api.ProcessRequest{ApiVersion: apiVersion, InputFASTQfiles: []string{"./some/dir"}, Endpoint: "CLIMB"}
+	req := &api.ProcessRequest{ApiVersion: apiVersion, InputFASTQfiles: []string{"./some/dir"}}
 
 	// run the mock
 	mockClient.EXPECT().Process(

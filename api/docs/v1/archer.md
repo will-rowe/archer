@@ -68,7 +68,6 @@ ProcessRequest will request a sample to be processed by Archer.
 | inputFASTQfiles | [string](#string) | repeated | inputFASTQfiles for this sample |
 | scheme | [string](#string) |  | scheme denotes the amplicon scheme used for the sample |
 | schemeVersion | [int32](#int32) |  | schemeVersion denotes the amplicon scheme version used |
-| endpoint | [string](#string) |  | endpoint for processed data to be sent |
 
 
 
@@ -108,6 +107,7 @@ processed by Archer.
 | startTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | startTime for processing |
 | endTime | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | endTime for processing (unset if processing still running) |
 | processStats | [SampleStats](#v1.SampleStats) |  | processStats contains details on the processing request output |
+| endpoint | [string](#string) |  | endpoint is the AWS S3 location for the processed sample |
 
 
 
