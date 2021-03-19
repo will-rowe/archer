@@ -220,8 +220,6 @@ func (a *Archer) addSample(sample *api.SampleInfo) error {
 // validateRequest will validate a service request.
 func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 
-	// TODO: use type switch to validate more than just Process requests
-
 	// check input files exist
 	if len(request.GetInputFASTQfiles()) == 0 {
 		return fmt.Errorf("no FASTQ files provided")
@@ -252,8 +250,6 @@ func (a *Archer) validateRequest(request *api.ProcessRequest) error {
 		}
 		a.ampliconCache[generateAmpliconSetID(request.GetScheme(), request.GetSchemeVersion())] = ampliconSet
 	}
-
-	// TODO: other checks (e.g. api endpoint)
 
 	return nil
 }

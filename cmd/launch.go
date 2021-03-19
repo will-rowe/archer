@@ -21,13 +21,19 @@ var (
 	numProcessors *int    // number of processors to use
 	awsBucketName *string // the AWS S3 bucket name for uploading data to
 	awsRegion     *string // the AWS region to use
+	logFile       *string // the log file
 )
 
 // launchCmd represents the launch command
 var launchCmd = &cobra.Command{
 	Use:   "launch",
 	Short: "Launch the Archer service",
-	Long:  `Launch the Archer service.`,
+	Long: `Launch the Archer service.
+	
+	This will start a gRPC server running that will
+	accept incoming Process and Watch requests. It
+	will offer the Archer API for filtering, compressing
+	and uploading ARTIC reads to an S3 endpoint.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		launchArcher()
 	},
@@ -42,6 +48,7 @@ func init() {
 	numProcessors = launchCmd.Flags().IntP("numProcessors", "p", -1, "number of processors to use (-1 == all)")
 	awsBucketName = launchCmd.Flags().String("awsBucketName", DefaultBucketName, "the AWS S3 bucket name for data upload")
 	awsRegion = launchCmd.Flags().String("awsRegion", bucket.DefaultRegion, "the AWS region to use")
+	logFile = launchCmd.Flags().StringP("logFile", "l", "", "where to write the server log (if unset, STDERR used)")
 	rootCmd.AddCommand(launchCmd)
 }
 

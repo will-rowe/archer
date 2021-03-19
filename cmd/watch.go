@@ -20,7 +20,12 @@ import (
 var watchCmd = &cobra.Command{
 	Use:   "watch",
 	Short: "Watch a running Archer service",
-	Long:  `Watch a running Archer service.`,
+	Long: `Watch a running Archer service.
+	
+	This command will start a gRPC message stream and 
+	print samples that have completed processing. It 
+	will include sample name, amplicon coverage, S3
+	location and processing time.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		watcher()
 	},
