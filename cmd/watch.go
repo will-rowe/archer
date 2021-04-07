@@ -16,6 +16,12 @@ import (
 	"github.com/will-rowe/archer/pkg/service/v1"
 )
 
+// command line options
+var (
+	grpcAddrWatch *string // the address of the gRPC server
+	grpcPortWatch *string // TCP port to listen to by the gRPC server
+)
+
 // watchCmd represents the watch command
 var watchCmd = &cobra.Command{
 	Use:   "watch",
@@ -32,8 +38,8 @@ var watchCmd = &cobra.Command{
 }
 
 func init() {
-	grpcAddr = watchCmd.Flags().String("grpcAddress", DefaultServerAddress, "address of the server hosting the Archer service")
-	grpcPort = watchCmd.Flags().String("grpcPort", DefaultgRPCport, "TCP port to listen to by the gRPC server")
+	grpcAddrWatch = watchCmd.Flags().String("grpcAddress", DefaultServerAddress, "address of the server hosting the Archer service")
+	grpcPortWatch = watchCmd.Flags().String("grpcPort", DefaultgRPCport, "TCP port to listen to by the gRPC server")
 	rootCmd.AddCommand(watchCmd)
 }
 
@@ -41,7 +47,7 @@ func init() {
 func watcher() {
 
 	// connect to the gRPC server
-	addr := fmt.Sprintf("%s:%s", *grpcAddr, *grpcPort)
+	addr := fmt.Sprintf("%s:%s", *grpcAddrWatch, *grpcPortWatch)
 	log.Printf("dialing %v", addr)
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {

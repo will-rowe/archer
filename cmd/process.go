@@ -14,6 +14,12 @@ import (
 	api "github.com/will-rowe/archer/pkg/api/v1"
 )
 
+// command line options
+var (
+	grpcAddrProcess *string // the address of the gRPC server
+	grpcPortProcess *string // TCP port to listen to by the gRPC server
+)
+
 // processCmd represents the process command
 var processCmd = &cobra.Command{
 	Use:   "process",
@@ -48,8 +54,8 @@ var processCmd = &cobra.Command{
 }
 
 func init() {
-	grpcAddr = processCmd.Flags().String("grpcAddress", DefaultServerAddress, "address of the server hosting the Archer service")
-	grpcPort = processCmd.Flags().String("grpcPort", DefaultgRPCport, "TCP port to listen to by the gRPC server")
+	grpcAddrProcess = processCmd.Flags().String("grpcAddress", DefaultServerAddress, "address of the server hosting the Archer service")
+	grpcPortProcess = processCmd.Flags().String("grpcPort", DefaultgRPCport, "TCP port to listen to by the gRPC server")
 	rootCmd.AddCommand(processCmd)
 }
 
@@ -73,7 +79,7 @@ func process() {
 	}
 
 	// connect to the gRPC server
-	addr := fmt.Sprintf("%s:%s", *grpcAddr, *grpcPort)
+	addr := fmt.Sprintf("%s:%s", *grpcAddrProcess, *grpcPortProcess)
 	log.Printf("dialing %v", addr)
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
