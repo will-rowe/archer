@@ -15,6 +15,8 @@ import (
 
 // command line options
 var (
+	grpcAddr      *string // the address of the gRPC server
+	grpcPort      *string // TCP port to listen to by the gRPC server
 	dbPath        *string // dbPath sets the location and filename for the Archer database
 	manifestURL   *string // manifestURL tells archer where to collect the ARTIC primer scheme manifest
 	numWorkers    *int    // number of concurrent request handlers to use

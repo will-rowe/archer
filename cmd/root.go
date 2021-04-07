@@ -25,12 +25,6 @@ var (
 	DefaultBucketName    = "artic-archer-uploads-test"
 )
 
-// command line arguments shared by two or more subcommands
-var (
-	grpcAddr *string // the address of the gRPC server
-	grpcPort *string // TCP port to listen to by the gRPC server
-)
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "archer",
