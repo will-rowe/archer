@@ -32,7 +32,13 @@ As well as the external Go packages listed in [go.mod](./go.mod), the following 
 
 ### Installing
 
-Easy installation is handled by the [Makefile](Makefile):
+Grab the release or use conda:
+
+```
+conda install -c bioconda archer
+```
+
+Easy installation from source is handled by the [Makefile](Makefile):
 
 ```
 make all
