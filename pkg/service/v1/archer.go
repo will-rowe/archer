@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/prologic/bitcask"
+	"git.mills.io/prologic/bitcask"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"

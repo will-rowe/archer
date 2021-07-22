@@ -10,7 +10,7 @@ require (
 	github.com/grailbio/bio v0.0.0-20200818183458-d966d878d120
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/prologic/bitcask v0.3.10
+	git.mills.io/prologic/bitcask v0.3.10
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.3
 	github.com/will-rowe/nthash v0.3.0
